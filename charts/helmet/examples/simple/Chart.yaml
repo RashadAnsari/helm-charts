@@ -6,12 +6,12 @@ version: "0.1.0"
 appVersion: "0.1.0"
 
 maintainers:
-  - name: Company.info Developers
-    url: https://company.info
+  - name: Rashad Ansari
+    url: https://github.com/RashadAnsari
 
 dependencies:
   - name: helmet
     version: ^0
-    repository: https://charts.companyinfo.dev
+    repository: oci://ghcr.io/rashadansari/charts
     import-values:
       - defaults

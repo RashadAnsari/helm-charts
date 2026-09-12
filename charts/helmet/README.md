@@ -32,8 +32,8 @@ dependency on what we call the `Helmet` library.
 
 dependencies:
   - name: helmet
-    version: 0.12.0
-    repository: https://charts.companyinfo.dev
+    version: 0.14.0
+    repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults
 ```
@@ -276,7 +276,7 @@ $ helm install nginx .
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
 
 ```shell
-$ helm install my-release --set ingress.hostname=example.com,serviceMonitor.enabled=true company/app
+$ helm install my-release --set ingress.hostname=example.com,serviceMonitor.enabled=true .
 ```
 
 The above command sets the APP Ingress hostname to `example.com` and enabled the ServiceMonitor.
@@ -284,7 +284,7 @@ The above command sets the APP Ingress hostname to `example.com` and enabled the
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
 
 ```console
-$ helm install my-release -f values.yaml company/app
+$ helm install my-release -f values.yaml .
 ```
 
 > **Tip**: You can use the default [values.yaml](values.yaml) just by [`import-values`](#Getting started)

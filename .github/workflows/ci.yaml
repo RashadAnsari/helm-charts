@@ -6,7 +6,11 @@ on:
       - 'main'
   pull_request:
     branches:
-      - '*'      
+      - '*'
+
+env:
+  HELM_VERSION: v3.22.0
+  OCI_REPOSITORY: charts
 
 jobs:
   check:
@@ -14,58 +18,71 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
-          version: v3.10.0
-
-      - name: Add charts' dependency repositories
-        run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
+          version: ${{ env.HELM_VERSION }}
 
       - name: Helm Build Dependencies
         working-directory: ./charts
         run: |
           helm dependency build helmet
- 
+
       - name: Helm lint
         working-directory: ./charts
         run: |
           helm lint helmet
 
-  release:
-    name: Release
+  publish:
+    name: Publish
     needs: check
     if: ${{ github.event_name != 'pull_request' }}
     permissions:
       contents: write
+      packages: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
-          version: v3.10.0
+          version: ${{ env.HELM_VERSION }}
 
-      - name: Add charts' dependency repositories
+      - name: Log in to GitHub Container Registry
         run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Configure Git
-        run: |
-          git config user.name "$GITHUB_ACTOR"
-          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-      - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.7.0
+      # Publishes every chart under charts/ whose version is not in the registry
+      # yet, so re-runs and pushes that do not bump a chart version are no-ops.
+      - name: Publish charts
         env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          CR_SKIP_EXISTING: true
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          registry="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${OCI_REPOSITORY}"
+          for chart in charts/*/; do
+            name="$(yq '.name' "${chart}Chart.yaml")"
+            version="$(yq '.version' "${chart}Chart.yaml")"
+
+            if helm show chart "oci://${registry}/${name}" --version "$version" >/dev/null 2>&1; then
+              echo "::notice::${name} ${version} is already published, skipping"
+              continue
+            fi
+
+            helm dependency build "$chart"
+            helm package "$chart" --destination dist
+
+            helm push "dist/${name}-${version}.tgz" "oci://${registry}"
+            gh release create "${name}-${version}" "dist/${name}-${version}.tgz" \
+              --title "${name} ${version}" \
+              --generate-notes
+          done

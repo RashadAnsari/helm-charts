@@ -1,7 +1,9 @@
 apiVersion: v2
 name: helmet
 description: Helmet is a library Helm Chart for grouping common logics. This chart is not deployable by itself.
-home: https://github.com/companyinfo/helm-charts/blob/main/charts/helmet
+home: https://github.com/RashadAnsari/helm-charts/blob/main/charts/helmet
+sources:
+  - https://github.com/RashadAnsari/helm-charts
 type: library
 version: "0.14.0"
 appVersion: "0.14.0"
@@ -11,8 +13,8 @@ keywords:
   - template
   - function
 maintainers:
-  - name: Company.info Developers
-    url: https://company.info
+  - name: Rashad Ansari
+    url: https://github.com/RashadAnsari
 dependencies:
   - name: common
     version: "2.29.1"
