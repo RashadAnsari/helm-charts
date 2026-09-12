@@ -15,12 +15,16 @@ charts/helmet/
   Chart.yaml            version and appVersion, kept in sync
   values.yaml           all values nested under exports.defaults, with ## @param annotations
   templates/_*.yaml     named template partials, all underscore-prefixed
+  templates/_pod.yaml   the pod template shared by both workloads
   README.md             the Parameters section is GENERATED, see below
   examples/simple/      minimal chart, renders Deployment + Service + Ingress
   examples/full/        exercises most features, renders 11 resources
+  examples/stateful/    StatefulSet with per-replica storage
 Makefile                deps, lint, readme, readme-check, check
 .github/workflows/ci.yaml
 ```
+
+`image.repository` decides whether there is a workload at all; `workload.kind` decides whether it is a Deployment or a StatefulSet.
 
 ## Hard rules
 
@@ -30,7 +34,7 @@ Makefile                deps, lint, readme, readme-check, check
 
 **Bump the chart version in the same commit as the change it describes.** CI publishes on push to `main` based on `Chart.yaml`'s `version`. A bump committed ahead of its fixes ships a version that does not contain them. This already happened once: published `0.15.0` is missing the fixes that its own commit range implies.
 
-**Do not claim StatefulSet support.** There is no StatefulSet template. The workload is always a Deployment. `persistence.enabled` makes one PVC shared by all replicas, not per-replica `volumeClaimTemplates`.
+**Both workloads share one pod template.** `templates/_pod.yaml` defines `helmet.podTemplate`, included by `helmet.deployment` and `helmet.statefulset`. Never add a container or pod-level field to one workload alone. If you change how storage is mounted, the volume condition in `_pod.yaml` and the `volumeClaimTemplates` condition in `_statefulset.yaml` must stay in step, or the pod mounts a volume nothing defines.
 
 ## Commands
 

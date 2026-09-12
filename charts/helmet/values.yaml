@@ -99,6 +99,22 @@ exports:
       ##
       pullSecrets: []
 
+    ## @section Workload parameters
+
+    ## Which workload to render. `image.repository` decides whether there is a
+    ## workload at all; this decides which kind it is.
+    ## A StatefulSet also gets a headless Service for stable per-pod DNS, and
+    ## turns `persistence` into volumeClaimTemplates so each replica gets its
+    ## own volume.
+    ## @param workload.kind Workload to render for the application. Allowed values: `Deployment` or `StatefulSet`
+    ## @param workload.podManagementPolicy Pod creation and scaling order. StatefulSet only. Allowed values: `OrderedReady` or `Parallel`
+    ## @param workload.serviceName Existing headless Service governing the StatefulSet. When empty, helmet creates one named `<fullname>-headless`
+    ##
+    workload:
+      kind: Deployment
+      podManagementPolicy: OrderedReady
+      serviceName: ""
+
     ## @section Deployment parameters
 
     ## @param replicaCount Number of APP replicas
@@ -347,7 +363,11 @@ exports:
     ##
     terminationGracePeriodSeconds: ""
 
-    ## @param updateStrategy.type APP deployment strategy type. Add `rollingUpdate` alongside it to tune maxSurge and maxUnavailable
+    ## Rendered as `spec.strategy` on a Deployment and `spec.updateStrategy` on a
+    ## StatefulSet. The two take different `rollingUpdate` fields: maxSurge and
+    ## maxUnavailable for a Deployment, partition and maxUnavailable for a
+    ## StatefulSet. Set it to match your `workload.kind`.
+    ## @param updateStrategy.type APP update strategy type. Add `rollingUpdate` alongside it to tune the rollout
     ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
     ##
     updateStrategy:

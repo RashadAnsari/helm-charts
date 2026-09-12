@@ -4,8 +4,14 @@
 {{- end }}
 
 {{- if .Values.image.repository }}
+{{- if include "helmet.isStatefulSet" . }}
+{{ include "helmet.statefulset" . }}
+{{- else }}
 {{ include "helmet.deployment" . }}
 {{- end }}
+{{- end }}
+
+{{ include "helmet.service.headless" . }}
 
 {{ include "helmet.persistence" . }}
 

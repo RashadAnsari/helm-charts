@@ -1,0 +1,29 @@
+{{/*
+Headless Service governing the StatefulSet. Kubernetes requires one for stable
+per-pod DNS: <pod>.<serviceName>.<namespace>.svc.<clusterDomain>.
+Skipped when workload.serviceName points at a Service you manage yourself.
+*/}}
+{{- define "helmet.service.headless" -}}
+{{- if and (include "helmet.isStatefulSet" .) (not .Values.workload.serviceName) -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "helmet.headlessServiceName" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- $annotations := include "common.tplvalues.merge" (dict "values" (list .Values.service.annotations .Values.commonAnnotations) "context" .) | fromYaml }}
+  {{- if $annotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  {{- $podLabels := include "common.tplvalues.merge" (dict "values" (list .Values.podLabels .Values.commonLabels) "context" .) | fromYaml }}
+  selector: {{- include "common.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 4 }}
+  {{- if .Values.service.ports }}
+  ports: {{- include "common.tplvalues.render" (dict "value" .Values.service.ports "context" $) | nindent 4 }}
+  {{- end }}
+{{- end -}}
+{{- end -}}

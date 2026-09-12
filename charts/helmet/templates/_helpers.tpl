@@ -30,3 +30,23 @@ Usage:
 {{ include "common.tplvalues.render" (dict "value" .envVars "context" $.context) }}
 {{- end }}
 {{- end -}}
+
+{{/*
+Returns a non-empty string when the chart is configured to render a StatefulSet.
+Empty otherwise, so it can be used directly in an `if`.
+Usage:
+{{ if include "helmet.isStatefulSet" . }}
+*/}}
+{{- define "helmet.isStatefulSet" -}}
+{{- if eq .Values.workload.kind "StatefulSet" -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Name of the headless Service that governs the StatefulSet, providing stable
+per-pod DNS. Honours workload.serviceName when set.
+*/}}
+{{- define "helmet.headlessServiceName" -}}
+{{- default (printf "%s-headless" (include "common.names.fullname" .)) .Values.workload.serviceName -}}
+{{- end -}}

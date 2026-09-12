@@ -1,5 +1,6 @@
 {{- define "helmet.persistence" -}}
-{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) -}}
+{{- /* A StatefulSet declares its storage through volumeClaimTemplates instead. */}}
+{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) (not (include "helmet.isStatefulSet" .)) -}}
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1

@@ -29,7 +29,7 @@ version: "0.1.0"
 
 dependencies:
   - name: helmet
-    version: 0.16.0
+    version: 0.17.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values:
       - defaults # Required to inherit helmet's default values
@@ -65,27 +65,31 @@ $ helm dependency update
 $ helm install my-app .
 ```
 
-Those ten lines of `values.yaml` render a Deployment, a Service and an Ingress, wired together with matching labels, selectors and ports. Two runnable charts are in [charts/helmet/examples](charts/helmet/examples): `simple` is the one above, and `full` exercises probes, persistence, autoscaling, monitoring and a CronJob.
+Those ten lines of `values.yaml` render a Deployment, a Service and an Ingress, wired together with matching labels, selectors and ports. Three runnable charts are in [charts/helmet/examples](charts/helmet/examples): `simple` is the one above, `full` exercises probes, persistence, autoscaling, monitoring and a CronJob, and `stateful` shows a StatefulSet with per-replica storage.
 
 ## What helmet renders
 
-`helmet.app` emits eleven resource kinds. Each one appears only when the values that need it are set, so a chart that never touches `persistence` never gets a PVC.
+`helmet.app` emits twelve resource kinds. Each one appears only when the values that need it are set, so a chart that never touches `persistence` never gets a PVC.
 
 | Resource                  | Enabled by                                  |
 |---------------------------|---------------------------------------------|
-| Deployment                | `image.repository`                          |
+| Deployment                | `image.repository`, the default workload    |
+| StatefulSet               | `image.repository` with `workload.kind: StatefulSet` |
 | Service                   | `ports` and `service.ports`                 |
+| Service (headless)        | a StatefulSet without its own `workload.serviceName` |
 | Ingress                   | `ingress.enabled`                           |
 | ConfigMap                 | `configMap.data`                            |
 | Secret                    | `secret.data` or `secret.stringData`        |
-| PersistentVolumeClaim     | `persistence.enabled` without an existing claim |
+| PersistentVolumeClaim     | `persistence.enabled` on a Deployment, without an existing claim |
 | HorizontalPodAutoscaler   | `autoscaling.enabled`                       |
 | ServiceAccount            | `serviceAccount.create`                     |
 | ServiceMonitor            | `serviceMonitor.enabled`                    |
 | PodMonitor                | `podMonitor.enabled`                        |
 | CronJob                   | `cronjob.enabled`                           |
 
-Behind those toggles sit 157 documented parameters covering probes, affinity presets, security contexts, sidecars, init containers, TLS secrets and self-signed certificates. See the [helmet reference](charts/helmet/README.md) for the full table, which is generated from `values.yaml` and checked in CI.
+Stateful workloads set `workload.kind: StatefulSet`. That swaps the Deployment for a StatefulSet, adds the headless Service Kubernetes needs for stable per-pod DNS, and turns `persistence` into `volumeClaimTemplates` so each replica gets its own volume. Both workloads share one pod template, so every other parameter behaves identically.
+
+Behind those toggles sit 160 documented parameters covering probes, affinity presets, security contexts, sidecars, init containers, TLS secrets and self-signed certificates. See the [helmet reference](charts/helmet/README.md) for the full table, which is generated from `values.yaml` and checked in CI.
 
 Naming, labels and capability detection come from [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common) 2.29.1, so resource names and the `app.kubernetes.io` labels follow the same conventions as the Bitnami catalog.
 
@@ -101,7 +105,7 @@ Charts are distributed as OCI artifacts, which Helm supports natively from 3.8 o
 There is no `helm repo add` step. OCI charts are referenced by their full registry path:
 
 ```bash
-$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.16.0
+$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.17.0
 ```
 
 The packages are public, so pulling needs no authentication. Packaged `.tgz` files are also attached to every [GitHub release](https://github.com/RashadAnsari/helm-charts/releases).

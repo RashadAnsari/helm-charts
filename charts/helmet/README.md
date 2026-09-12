@@ -22,27 +22,47 @@ Most application charts differ in a handful of values and are otherwise the same
 
 ## Resources
 
-`helmet.app` renders eleven resource kinds. Each is gated on the values that need it, so a chart that never sets `persistence` never gets a PVC.
+`helmet.app` renders twelve resource kinds. Each is gated on the values that need it, so a chart that never sets `persistence` never gets a PVC.
 
 | Resource                | Enabled by                           |
 |-------------------------|--------------------------------------|
-| Deployment              | `image.repository`                   |
+| Deployment              | `image.repository`, when `workload.kind` is `Deployment` |
+| StatefulSet             | `image.repository`, when `workload.kind` is `StatefulSet` |
 | Service                 | `ports` and `service.ports`          |
+| Service (headless)      | `workload.kind` is `StatefulSet` and `workload.serviceName` is empty |
 | Ingress                 | `ingress.enabled`                    |
 | ConfigMap               | `configMap.data`                     |
 | Secret                  | `secret.data` or `secret.stringData` |
-| PersistentVolumeClaim   | `persistence.enabled`, unless `persistence.existingClaim` is set |
+| PersistentVolumeClaim   | `persistence.enabled` on a Deployment, unless `persistence.existingClaim` is set |
 | HorizontalPodAutoscaler | `autoscaling.enabled`                |
 | ServiceAccount          | `serviceAccount.create`              |
 | ServiceMonitor          | `serviceMonitor.enabled`             |
 | PodMonitor              | `podMonitor.enabled`                 |
 | CronJob                 | `cronjob.enabled`                    |
 
+### Choosing the workload
+
+`image.repository` decides whether there is a workload at all. `workload.kind` decides which kind it is, and defaults to `Deployment`:
+
+```yaml
+workload:
+  kind: StatefulSet
+  podManagementPolicy: Parallel   # or OrderedReady, the default
+```
+
+Switching to `StatefulSet` changes three things:
+
+- A headless Service is created to govern it, named `<fullname>-headless`, giving each pod stable DNS at `<pod>.<service>.<namespace>.svc.<clusterDomain>`. Set `workload.serviceName` to point at a Service you manage instead, and helmet will not create one.
+- `persistence` becomes `volumeClaimTemplates`, so every replica gets its own volume rather than sharing one. `persistence.existingClaim` is the exception: a named claim is a single shared volume, so it stays a plain pod volume.
+- `updateStrategy` is rendered as `spec.updateStrategy` rather than a Deployment's `spec.strategy`. The two accept different `rollingUpdate` fields, so set it to match your `workload.kind`.
+
+Everything else, including probes, resources, affinity, sidecars and the ConfigMap and Secret checksums that trigger restarts, is identical between the two. Both workloads share one pod template.
+
 When the Ingress is enabled, helmet also renders TLS Secrets from `ingress.secrets`. If no secrets are supplied and both `ingress.tls` and `ingress.selfSigned` are set, it generates a self-signed certificate instead.
 
 Naming, label and capability helpers come from [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common) 2.29.1, so resource names and `app.kubernetes.io` labels match the conventions used across the Bitnami catalog.
 
-To include only part of the set, call the individual templates instead of `helmet.app`: `helmet.deployment`, `helmet.service`, `helmet.ingress`, `helmet.hpa`, `helmet.configmap`, `helmet.secret`, `helmet.persistence`, `helmet.serviceaccount`, `helmet.servicemonitor`, `helmet.podmonitor` and `helmet.cronjob`.
+To include only part of the set, call the individual templates instead of `helmet.app`: `helmet.deployment`, `helmet.statefulset`, `helmet.service`, `helmet.service.headless`, `helmet.ingress`, `helmet.hpa`, `helmet.configmap`, `helmet.secret`, `helmet.persistence`, `helmet.serviceaccount`, `helmet.servicemonitor`, `helmet.podmonitor` and `helmet.cronjob`.
 
 ### Install notes
 
@@ -66,7 +86,7 @@ To include only part of the set, call the individual templates instead of `helme
 
 dependencies:
   - name: helmet
-    version: 0.16.0
+    version: 0.17.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults
@@ -105,7 +125,7 @@ ingress:
 $ helm install nginx .
 ```
 
-Two runnable charts are in [examples](examples): `simple` is the chart above, and `full` exercises probes, persistence, autoscaling, monitoring and a CronJob.
+Three runnable charts are in [examples](examples): `simple` is the chart above, `full` exercises probes, persistence, autoscaling, monitoring and a CronJob, and `stateful` shows a StatefulSet with per-replica storage.
 
 ## Parameters
 
@@ -144,6 +164,14 @@ Two runnable charts are in [examples](examples): `simple` is the chart above, an
 | `image.pullPolicy`  | Image pull policy                                                                               | `nil`       |
 | `image.pullSecrets` | Image pull secrets                                                                              | `[]`        |
 
+### Workload parameters
+
+| Name                           | Description                                                                                                     | Value          |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------- | -------------- |
+| `workload.kind`                | Workload to render for the application. Allowed values: `Deployment` or `StatefulSet`                           | `Deployment`   |
+| `workload.podManagementPolicy` | Pod creation and scaling order. StatefulSet only. Allowed values: `OrderedReady` or `Parallel`                  | `OrderedReady` |
+| `workload.serviceName`         | Existing headless Service governing the StatefulSet. When empty, helmet creates one named `<fullname>-headless` | `""`           |
+
 ### Deployment parameters
 
 | Name                                    | Description                                                                                                              | Value           |
@@ -178,7 +206,7 @@ Two runnable charts are in [examples](examples): `simple` is the chart above, an
 | `priorityClassName`                     | Priority Class Name                                                                                                      | `""`            |
 | `schedulerName`                         | Use an alternate scheduler, e.g. "stork".                                                                                | `""`            |
 | `terminationGracePeriodSeconds`         | Seconds APP pod needs to terminate gracefully                                                                            | `""`            |
-| `updateStrategy.type`                   | APP deployment strategy type. Add `rollingUpdate` alongside it to tune maxSurge and maxUnavailable                       | `RollingUpdate` |
+| `updateStrategy.type`                   | APP update strategy type. Add `rollingUpdate` alongside it to tune the rollout                                           | `RollingUpdate` |
 | `extraVolumes`                          | Array to add extra volumes (evaluated as a template)                                                                     | `[]`            |
 | `extraVolumeMounts`                     | Array to add extra mounts (normally used with extraVolumes, evaluated as a template)                                     | `[]`            |
 | `sidecars`                              | Add additional sidecar containers to the APP pods                                                                        | `[]`            |

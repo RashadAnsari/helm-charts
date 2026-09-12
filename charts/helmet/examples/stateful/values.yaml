@@ -1,0 +1,68 @@
+# A StatefulSet with one volume per replica.
+#
+# workload.kind is the only line that separates this from a Deployment.
+# Everything else below works identically for either workload.
+
+workload:
+  kind: StatefulSet
+  # Parallel starts and scales all pods at once. The default, OrderedReady,
+  # waits for each pod to be Ready before moving to the next.
+  podManagementPolicy: OrderedReady
+
+image:
+  registry: docker.io
+  repository: postgres
+  tag: "18-alpine"
+  pullPolicy: IfNotPresent
+
+replicaCount: 3
+
+ports:
+  - name: pg
+    containerPort: 5432
+    protocol: TCP
+
+service:
+  type: ClusterIP
+  ports:
+    - name: pg
+      protocol: TCP
+      port: 5432
+      targetPort: pg
+
+envVars:
+  POSTGRES_PASSWORD: replace-me
+  PGDATA: /var/lib/postgresql/data/pgdata
+
+# Rendered as volumeClaimTemplates, so each replica gets its own 10Gi volume
+# named data-<release>-stateful-0, -1, -2. On a Deployment this same block
+# would produce a single PVC shared by every replica instead.
+persistence:
+  enabled: true
+  mountPath: /var/lib/postgresql/data
+  size: 10Gi
+  accessModes:
+    - ReadWriteOnce
+
+readinessProbe:
+  enabled: true
+  exec:
+    command: ["pg_isready", "-U", "postgres"]
+  periodSeconds: 10
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+podSecurityContext:
+  enabled: true
+  fsGroup: 999
+
+# A StatefulSet takes spec.updateStrategy, whose rollingUpdate accepts
+# partition and maxUnavailable. A Deployment's spec.strategy takes maxSurge
+# and maxUnavailable instead.
+updateStrategy:
+  type: RollingUpdate
