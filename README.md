@@ -1,78 +1,125 @@
 # Helm Charts
 
 [![Charts CI](https://github.com/RashadAnsari/helm-charts/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/RashadAnsari/helm-charts/actions/workflows/ci.yaml)
-[![Release](https://img.shields.io/github/v/release/RashadAnsari/helm-charts?sort=semver)](https://github.com/RashadAnsari/helm-charts/releases)
-[![License](https://img.shields.io/github/license/RashadAnsari/helm-charts)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/RashadAnsari/helm-charts?sort=semver&label=release)](https://github.com/RashadAnsari/helm-charts/releases/latest)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-rashadansari%2Fcharts-2088FF?logo=github&logoColor=white)](https://github.com/RashadAnsari/helm-charts/pkgs/container/charts%2Fhelmet)
+[![Helm](https://img.shields.io/badge/Helm-3.9%2B-0F1689?logo=helm&logoColor=white)](https://helm.sh)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.23%2B-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io)
+[![License](https://img.shields.io/github/license/RashadAnsari/helm-charts?color=blue)](LICENSE)
 
-Helm charts published as OCI artifacts to GitHub Container Registry.
+Every Kubernetes service you ship needs the same eleven YAML files. Most teams solve that by copying the last chart they wrote and deleting the parts they don't need, which is how you end up maintaining nine slightly different Deployment templates.
+
+**helmet** is a Helm library chart that holds those templates once. Your application chart declares it as a dependency, writes one `include`, and describes the app in `values.yaml`.
 
 ## Charts
 
-| Chart                            | Type    | Description                                                    |
-|----------------------------------|---------|----------------------------------------------------------------|
-| [helmet](charts/helmet)          | library | Common template definitions shared by application Helm charts  |
+| Chart                   | Type    | Version                                                                                                                            | Description                                                            |
+|-------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| [helmet](charts/helmet) | library | [![Release](https://img.shields.io/github/v/release/RashadAnsari/helm-charts?sort=semver&label=%20&color=0F1689)](https://github.com/RashadAnsari/helm-charts/releases/latest) | Common templates shared by application charts. Not deployable on its own |
 
-## TL;DR
+## Quick start
 
-```bash
-$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.14.0
-```
-
-`helmet` is a [library chart](https://helm.sh/docs/topics/library_charts/), so it is not installed on its own. Add it as a dependency of your application chart:
+Add helmet to your chart:
 
 ```yaml
-# file: Chart.yaml
+# Chart.yaml
+apiVersion: v2
+name: my-app
+version: "0.1.0"
 
 dependencies:
   - name: helmet
     version: 0.14.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values:
-      - defaults
+      - defaults # Required to inherit helmet's default values
 ```
+
+Write one line of template:
+
+```yaml
+# templates/app.yaml
+{{ include "helmet.app" . }}
+```
+
+Describe the app:
+
+```yaml
+# values.yaml
+image:
+  repository: nginx
+
+ports:
+  - name: http
+    containerPort: 80
+    protocol: TCP
+
+ingress:
+  enabled: true
+```
+
+Then install it:
 
 ```bash
 $ helm dependency update
+$ helm install my-app .
 ```
 
-See the [helmet README](charts/helmet/README.md) for the full parameter reference and a walkthrough.
+Those ten lines of `values.yaml` render a Deployment, a Service and an Ingress, wired together with matching labels, selectors and ports. The full example lives in [charts/helmet/examples/simple](charts/helmet/examples/simple).
 
-## Before you begin
+## What helmet renders
 
-### Prerequisites
+`helmet.app` emits eleven resource kinds. Each one appears only when the values that need it are set, so a chart that never touches `persistence` never gets a PVC.
+
+| Resource                  | Enabled by                                  |
+|---------------------------|---------------------------------------------|
+| Deployment                | `image.repository`                          |
+| Service                   | `ports` and `service.ports`                 |
+| Ingress                   | `ingress.enabled`                           |
+| ConfigMap                 | `configMap.data`                            |
+| Secret                    | `secret.data` or `secret.stringData`        |
+| PersistentVolumeClaim     | `persistence.enabled` without an existing claim |
+| HorizontalPodAutoscaler   | `autoscaling.enabled`                       |
+| ServiceAccount            | `serviceAccount.create`                     |
+| ServiceMonitor            | `serviceMonitor.enabled`                    |
+| PodMonitor                | `podMonitor.enabled`                        |
+| CronJob                   | `cronjob.enabled`                           |
+
+Behind those toggles sit 130 documented parameters covering probes, affinity presets, security contexts, sidecars, init containers, TLS secrets and self-signed certificates. See the [helmet reference](charts/helmet/README.md) for the full table.
+
+Naming, labels and capability detection come from [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common) 2.29.1, so resource names and the `app.kubernetes.io` labels follow the same conventions as the Bitnami catalog.
+
+## Requirements
 
 - Kubernetes 1.23+
-- Helm 3.9.0+
+- Helm 3.9+
 
-### Install Helm
+Charts are distributed as OCI artifacts, which Helm supports natively from 3.8 onward. To install Helm, see the [Helm install guide](https://helm.sh/docs/intro/install/).
 
-Helm is a tool for managing Kubernetes charts. Charts are packages of pre-configured Kubernetes resources.
+## Pulling charts
 
-To install Helm, refer to the [Helm install guide](https://github.com/helm/helm#install) and ensure that the `helm` binary is in the `PATH` of your shell.
-
-### Pulling charts
-
-These charts are distributed as OCI artifacts rather than through a classic `helm repo add` index, so there is no repository to register. Reference a chart by its full registry path instead:
+There is no `helm repo add` step. OCI charts are referenced by their full registry path:
 
 ```bash
-$ helm pull oci://ghcr.io/rashadansari/charts/<chart> --version <version>
+$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.14.0
 ```
 
-Packaged `.tgz` files are also attached to each [GitHub release](https://github.com/RashadAnsari/helm-charts/releases).
-
-The packages are public, so no authentication is needed to pull them. If you are pushing, log in first:
-
-```bash
-$ helm registry login ghcr.io -u <github-username>
-```
-
-### Using Helm
-
-Please refer to the [Quick Start guide](https://helm.sh/docs/intro/quickstart/) if you wish to get running in just a few commands, otherwise the [Using Helm Guide](https://helm.sh/docs/intro/using_helm/) provides detailed instructions on how to use the Helm client to manage packages on your Kubernetes cluster.
+The packages are public, so pulling needs no authentication. Packaged `.tgz` files are also attached to every [GitHub release](https://github.com/RashadAnsari/helm-charts/releases).
 
 ## Releasing
 
-Every push to `main` runs [Charts CI](.github/workflows/ci.yaml), which lints each chart and then publishes any chart whose `version` in `Chart.yaml` is not in the registry yet. Publishing means pushing the OCI artifact to `ghcr.io/rashadansari/charts` and creating a GitHub release with the packaged `.tgz` attached. To cut a release, bump `version` in the chart's `Chart.yaml` and merge to `main`.
+[Charts CI](.github/workflows/ci.yaml) lints every chart on pull requests. On a push to `main` it publishes any chart whose `version` in `Chart.yaml` is not in the registry yet, pushing the OCI artifact to `ghcr.io/rashadansari/charts` and cutting a GitHub release with the packaged `.tgz` attached.
+
+To ship a change, bump `version` in the chart's `Chart.yaml` and merge. Versions that are already published are skipped, so merges that touch nothing else are no-ops.
+
+## Contributing
+
+Issues and pull requests are welcome. Run the same checks CI does before opening one:
+
+```bash
+$ helm dependency build charts/helmet
+$ helm lint charts/helmet
+```
 
 ## License
 

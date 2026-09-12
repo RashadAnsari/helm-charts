@@ -1,24 +1,48 @@
 # Helmet
 
-The Helmet is a [Helm Library Chart](https://helm.sh/docs/topics/library_charts/) that defines many chart templates like Deployment, Service, Ingress, etc which can used in other application charts.
+[![Release](https://img.shields.io/github/v/release/RashadAnsari/helm-charts?sort=semver&label=chart)](https://github.com/RashadAnsari/helm-charts/releases/latest)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-rashadansari%2Fcharts%2Fhelmet-2088FF?logo=github&logoColor=white)](https://github.com/RashadAnsari/helm-charts/pkgs/container/charts%2Fhelmet)
+[![Chart type](https://img.shields.io/badge/chart%20type-library-0F1689?logo=helm&logoColor=white)](https://helm.sh/docs/topics/library_charts/)
+[![Helm](https://img.shields.io/badge/Helm-3.9%2B-0F1689?logo=helm&logoColor=white)](https://helm.sh)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-1.23%2B-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io)
+[![License](https://img.shields.io/github/license/RashadAnsari/helm-charts?color=blue)](../../LICENSE)
+
+Helmet is a [Helm library chart](https://helm.sh/docs/topics/library_charts/) holding the templates that every application chart ends up needing. Declare it as a dependency, write a single `include`, and describe the application in `values.yaml`. Helmet renders the workload, its networking and its monitoring with names, labels and selectors already consistent.
 
 ## Background
 
-In Helm 3, their team introduced the concept of a
-[Library chart](https://helm.sh/docs/topics/library_charts/).
+Helm 3 introduced the library chart:
 
 > A library chart is a type of Helm chart that defines chart primitives or
 definitions which can be shared by Helm templates in other charts. This
 allows users to share snippets of code that can be re-used across charts,
 avoiding repetition and keeping charts DRY.
 
-The Helmet library was created because we saw many charts requiring only a
-few select configuration options in their Helm charts.
+Most application charts differ in a handful of values and are otherwise the same file twice: identical Deployment scaffolding, identical Service, identical probe blocks. Copying that between repositories means every fix has to be applied everywhere it was pasted. Helmet keeps the scaffolding in one versioned chart, so an application chart contains only the part that is actually specific to the application.
 
-In order to stay somewhat DRY (Don't Repeat Yourself) and keeping with Helm 3
-usage for a Library chart, we saw this pattern and decided it was worth it for
-us to create a library. This means each one of application charts has a
-dependency on what we call the `Helmet` library.
+## Resources
+
+`helmet.app` renders eleven resource kinds. Each is gated on the values that need it, so a chart that never sets `persistence` never gets a PVC.
+
+| Resource                | Enabled by                           |
+|-------------------------|--------------------------------------|
+| Deployment              | `image.repository`                   |
+| Service                 | `ports` and `service.ports`          |
+| Ingress                 | `ingress.enabled`                    |
+| ConfigMap               | `configMap.data`                     |
+| Secret                  | `secret.data` or `secret.stringData` |
+| PersistentVolumeClaim   | `persistence.enabled`, unless `persistence.existingClaim` is set |
+| HorizontalPodAutoscaler | `autoscaling.enabled`                |
+| ServiceAccount          | `serviceAccount.create`              |
+| ServiceMonitor          | `serviceMonitor.enabled`             |
+| PodMonitor              | `podMonitor.enabled`                 |
+| CronJob                 | `cronjob.enabled`                    |
+
+When the Ingress is enabled, helmet also renders TLS Secrets from `ingress.secrets`. If no secrets are supplied and both `ingress.tls` and `ingress.selfSigned` are set, it generates a self-signed certificate instead.
+
+Naming, label and capability helpers come from [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common) 2.29.1, so resource names and `app.kubernetes.io` labels match the conventions used across the Bitnami catalog.
+
+To include only part of the set, call the individual templates instead of `helmet.app`: `helmet.deployment`, `helmet.service`, `helmet.ingress`, `helmet.hpa`, `helmet.configmap`, `helmet.secret`, `helmet.persistence`, `helmet.serviceaccount`, `helmet.servicemonitor`, `helmet.podmonitor` and `helmet.cronjob`.
 
 ## Prerequisites
 
@@ -107,7 +131,7 @@ $ helm install nginx .
 | `image.pullSecrets` | Image pull secrets, specify an array of imagePullSecrets (secrets must be manually created in the namespace) | `[]`        |
 
 
-### Deployment/Statefulset parameters
+### Deployment parameters
 
 | Name                                    | Description                                                                                                              | Value                                                            |
 |-----------------------------------------|--------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|
@@ -362,7 +386,7 @@ As an alternative, you can use of the preset configurations for pod affinity, po
 
 ### Sidecars and Init Containers
 
-If you have a need for additional containers to run within the same pod as Redis&reg;, you can do so via the `sidecars` config parameter. Simply define your container according to the Kubernetes container spec.
+To run additional containers in the same pod as the application, define them under the `sidecars` parameter using the Kubernetes container spec.
 
 ```yaml
 sidecars:
