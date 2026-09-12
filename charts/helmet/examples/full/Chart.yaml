@@ -1,0 +1,17 @@
+apiVersion: v2
+name: full
+description: Application chart exercising most of what Helmet renders
+type: application
+version: "0.1.0"
+appVersion: "0.1.0"
+
+maintainers:
+  - name: Rashad Ansari
+    url: https://github.com/RashadAnsari
+
+dependencies:
+  - name: helmet
+    version: ^0
+    repository: oci://ghcr.io/rashadansari/charts
+    import-values:
+      - defaults

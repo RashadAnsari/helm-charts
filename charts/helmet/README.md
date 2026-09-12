@@ -95,206 +95,228 @@ ingress:
 $ helm install nginx .
 ```
 
+Two runnable charts are in [examples](examples): `simple` is the chart above, and `full` exercises probes, persistence, autoscaling, monitoring and a CronJob.
+
 ## Parameters
 
 ### Global parameters
 
-| Name                      | Description                                     | Value |
-|---------------------------|-------------------------------------------------|-------|
-| `global.imageRegistry`    | Global Docker image registry                    | `""`  |
-| `global.imagePullSecrets` | Global Docker registry secret names as an array | `[]`  |
-| `global.storageClass`     | Global StorageClass for Persistent Volume(s)    | `""`  |
-
+| Name                                                  | Description                                                                                                                                                                                                                                                                                                                                                         | Value   |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `global.imageRegistry`                                | Global Docker image registry                                                                                                                                                                                                                                                                                                                                        | `""`    |
+| `global.imagePullSecrets`                             | Global Docker registry secret names as an array                                                                                                                                                                                                                                                                                                                     | `[]`    |
+| `global.defaultStorageClass`                          | Global default StorageClass for Persistent Volume(s)                                                                                                                                                                                                                                                                                                                | `""`    |
+| `global.compatibility.openshift.adaptSecurityContext` | Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation) | `auto`  |
+| `global.compatibility.omitEmptySeLinuxOptions`        | If set to true, removes the seLinuxOptions from the securityContexts when it is set to an empty object                                                                                                                                                                                                                                                              | `false` |
 
 ### Common parameters
 
-| Name                | Description                                                                                                | Value             |
-|---------------------|------------------------------------------------------------------------------------------------------------|-------------------|
-| `kubeVersion`       | Force target Kubernetes version (using Helm capabilities if not set)                                       | `""`              |
-| `nameOverride`      | String to partially override common.names.fullname template with a string (will maintain the release name) | `""`              |
-| `fullnameOverride`  | String to fully override common.names.fullname template with a string                                      | `""`              |
-| `namespaceOverride` | String to fully override common.names.namespace template with a string                                     | `""`              |
-| `clusterDomain`     | Kubernetes Cluster Domain name                                                                             | `"cluster.local"` |
-| `commonLabels`      | Labels to be added to all deployed resources                                                               | `{}`              |
-| `commonAnnotations` | Annotations to be added to all deployed resources                                                          | `{}`              |
-
+| Name                | Description                                                                                                | Value           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- | --------------- |
+| `kubeVersion`       | Force target Kubernetes version (using Helm capabilities if not set)                                       | `""`            |
+| `nameOverride`      | String to partially override common.names.fullname template with a string (will maintain the release name) | `""`            |
+| `fullnameOverride`  | String to fully override common.names.fullname template with a string                                      | `""`            |
+| `namespaceOverride` | String to fully override common.names.namespace template with a string                                     | `""`            |
+| `clusterDomain`     | Kubernetes Cluster Domain name                                                                             | `cluster.local` |
+| `annotations`       | Additional annotations to be added to the App Deployment or Statefulset. Evaluated as a template           | `{}`            |
+| `labels`            | Additional labels to be added to the App Deployment or Statefulset. Evaluated as a template                | `{}`            |
+| `commonLabels`      | Labels to be added to all deployed resources                                                               | `{}`            |
+| `commonAnnotations` | Annotations to be added to all deployed resources                                                          | `{}`            |
 
 ### Image parameters
 
-| Name                | Description                                                                                                  | Value       |
-|---------------------|--------------------------------------------------------------------------------------------------------------|-------------|
-| `image.registry`    | Image registry                                                                                               | `docker.io` |
-| `image.repository`  | Image repository                                                                                             | `""`        |
-| `image.tag`         | Image tag (immutable tags are recommended)                                                                   | `latest`    |
-| `image.digest`      | Image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag              | `""`        |
-| `image.pullPolicy`  | Image pull policy, Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'                 | `Always`    |
-| `image.pullSecrets` | Image pull secrets, specify an array of imagePullSecrets (secrets must be manually created in the namespace) | `[]`        |
-
+| Name                | Description                                                                                     | Value       |
+| ------------------- | ----------------------------------------------------------------------------------------------- | ----------- |
+| `image.registry`    | Image registry                                                                                  | `docker.io` |
+| `image.repository`  | Image repository                                                                                | `""`        |
+| `image.tag`         | Image tag (immutable tags are recommended)                                                      | `latest`    |
+| `image.digest`      | Image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`        |
+| `image.pullPolicy`  | Image pull policy                                                                               | `nil`       |
+| `image.pullSecrets` | Image pull secrets                                                                              | `[]`        |
 
 ### Deployment parameters
 
-| Name                                    | Description                                                                                                              | Value                                                            |
-|-----------------------------------------|--------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------|
-| `replicaCount`                          | Number of APP replicas                                                                                                   | `1`                                                              |
-| `revisionHistoryLimit`                  | The number of old history to retain to allow rollback                                                                    | `10`                                                             |
-| `ports`                                 | List of ports to expose from the container                                                                               | `[{"name": "http", "containerPort": "8080", "protocol": "TCP"}]` |
-| `livenessProbe.enabled`                 | Enable livenessProbe on APP container (only main container)                                                              | `false`                                                          |
-| `readinessProbe.enabled`                | Enable readinessProbe on APP container (only main container)                                                             | `false`                                                          |
-| `startupProbe.enabled`                  | Enable startupProbe on APP container (only main container)                                                               | `false`                                                          |
-| `podRestartPolicy`                      | Set restart policy for all containers within the pod                                                                     | `Always`                                                         |
-| `podSecurityContext.enabled`            | Enabled APP pods' Security Context                                                                                       | `false`                                                          |
-| `podSecurityContext.fsGroup`            | Set APP pod's Security Context fsGroup                                                                                   | `0`                                                              |
-| `containerSecurityContext.enabled`      | Enabled APP containers' Security Context (only main container)                                                           | `false`                                                          |
-| `containerSecurityContext.runAsUser`    | Set APP containers' Security Context runAsUser                                                                           | `1001`                                                           |
-| `containerSecurityContext.runAsNonRoot` | Set APP containers' Security Context runAsNonRoot                                                                        | `true`                                                           |
-| `lifecycleHooks`                        | for the APP main container to automate configuration before or after startup                                             | `{}`                                                             |
-| `resources.limits`                      | The resources limits for the APP container (only main container)                                                         | `{}`                                                             |
-| `resources.requests`                    | The resources requests for the APP container (only main container)                                                       | `{}`                                                             |
-| `hostAliases`                           | Add deployment host aliases                                                                                              | `[]`                                                             |
-| `podLabels`                             | Additional pods' labels                                                                                                  | `{}`                                                             |
-| `podAnnotations`                        | Additional pods' annotations                                                                                             | `{}`                                                             |
-| `podAffinityPreset`                     | Pod affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                      | `""`                                                             |
-| `podAntiAffinityPreset`                 | Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                 | `soft`                                                           |
-| `nodeAffinityPreset.type`               | Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                | `""`                                                             |
-| `nodeAffinityPreset.key`                | Node label key to match Ignored if `affinity` is set.                                                                    | `""`                                                             |
-| `nodeAffinityPreset.values`             | Node label values to match. Ignored if `affinity` is set.                                                                | `[]`                                                             |
-| `affinity`                              | Affinity for pod assignment                                                                                              | `{}`                                                             |
-| `nodeSelector`                          | Node labels for pod assignment                                                                                           | `{}`                                                             |
-| `tolerations`                           | Tolerations for pod assignment                                                                                           | `[]`                                                             |
-| `topologySpreadConstraints`             | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains. Evaluated as a template | `{}`                                                             |
-| `priorityClassName`                     | Name of the existing priority class to be used by APP pods, priority class needs to be created beforehand                | `""`                                                             |
-| `schedulerName`                         | Use an alternate scheduler, e.g. "stork"                                                                                 | `""`                                                             |
-| `terminationGracePeriodSeconds`         | Seconds APP pod needs to terminate gracefully                                                                            | `""`                                                             |
-| `updateStrategy.type`                   | APP deployment strategy type                                                                                             | `RollingUpdate`                                                  |
-| `updateStrategy.rollingUpdate`          | APP deployment rolling update configuration parameters                                                                   | `{}`                                                             |
-| `extraVolumes`                          | Optionally specify extra list of additional volumes for the APP pod(s)                                                   | `[]`                                                             |
-| `extraVolumeMounts`                     | Optionally specify extra list of additional volumeMounts for the APP container(s)                                        | `[]`                                                             |
-| `sidecars`                              | Add additional sidecar containers to the APP pod(s)                                                                      | `[]`                                                             |
-| `initContainers`                        | Add additional init containers to the APP pod(s)                                                                         | `[]`                                                             |
-| `command`                               | Override main container's command                                                                                        | `[]`                                                             |
-| `args`                                  | Override main container's args                                                                                           | `[]`                                                             |
-| `envVars`                               | Environment variables to be set on APP container                                                                         | `{} or []`                                                             |
-| `envVarsConfigMap`                      | ConfigMap with environment variables                                                                                     | `""`                                                             |
-| `envVarsSecret`                         | Secret with environment variables                                                                                        | `""`                                                             |
-
+| Name                                    | Description                                                                                                              | Value           |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------- |
+| `replicaCount`                          | Number of APP replicas                                                                                                   | `1`             |
+| `revisionHistoryLimit`                  | The number of old history to retain to allow rollback                                                                    | `10`            |
+| `ports`                                 | List of ports to expose from the container. Each entry takes name, containerPort and protocol                            | `[]`            |
+| `livenessProbe.enabled`                 | Enable livenessProbe on the main container. Define the probe itself alongside this key                                   | `false`         |
+| `readinessProbe.enabled`                | Enable readinessProbe on the main container. Define the probe itself alongside this key                                  | `false`         |
+| `startupProbe.enabled`                  | Enable startupProbe on the main container. Define the probe itself alongside this key                                    | `false`         |
+| `podRestartPolicy`                      | Restart policy for all containers within the pod                                                                         | `Always`        |
+| `podSecurityContext.enabled`            | Enabled APP pods' Security Context                                                                                       | `false`         |
+| `podSecurityContext.fsGroup`            | Set APP pod's Security Context fsGroup                                                                                   | `0`             |
+| `containerSecurityContext.enabled`      | Enabled APP containers' Security Context                                                                                 | `false`         |
+| `containerSecurityContext.runAsUser`    | Set APP containers' Security Context runAsUser                                                                           | `1001`          |
+| `containerSecurityContext.runAsNonRoot` | Set APP container's Security Context runAsNonRoot                                                                        | `true`          |
+| `lifecycleHooks`                        | LifecycleHook to set additional configuration at startup Evaluated as a template                                         | `{}`            |
+| `resources.limits`                      | The resources limits for the container                                                                                   | `{}`            |
+| `resources.requests`                    | The requested resources for the container                                                                                | `{}`            |
+| `hostAliases`                           | Add deployment host aliases                                                                                              | `[]`            |
+| `podLabels`                             | Additional pod labels                                                                                                    | `{}`            |
+| `podAnnotations`                        | Additional pod annotations                                                                                               | `{}`            |
+| `podAffinityPreset`                     | Pod affinity preset. Allowed values: soft, hard                                                                          | `""`            |
+| `podAntiAffinityPreset`                 | Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                 | `soft`          |
+| `nodeAffinityPreset.type`               | Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`                                | `""`            |
+| `nodeAffinityPreset.key`                | Node label key to match Ignored if `affinity` is set.                                                                    | `""`            |
+| `nodeAffinityPreset.values`             | Node label values to match. Ignored if `affinity` is set.                                                                | `[]`            |
+| `affinity`                              | Affinity for pod assignment                                                                                              | `{}`            |
+| `nodeSelector`                          | Node labels for pod assignment.                                                                                          | `{}`            |
+| `tolerations`                           | Tolerations for pod assignment.                                                                                          | `[]`            |
+| `topologySpreadConstraints`             | Topology Spread Constraints for pod assignment spread across your cluster among failure-domains. Evaluated as a template | `[]`            |
+| `priorityClassName`                     | Priority Class Name                                                                                                      | `""`            |
+| `schedulerName`                         | Use an alternate scheduler, e.g. "stork".                                                                                | `""`            |
+| `terminationGracePeriodSeconds`         | Seconds APP pod needs to terminate gracefully                                                                            | `""`            |
+| `updateStrategy.type`                   | APP deployment strategy type. Add `rollingUpdate` alongside it to tune maxSurge and maxUnavailable                       | `RollingUpdate` |
+| `extraVolumes`                          | Array to add extra volumes (evaluated as a template)                                                                     | `[]`            |
+| `extraVolumeMounts`                     | Array to add extra mounts (normally used with extraVolumes, evaluated as a template)                                     | `[]`            |
+| `sidecars`                              | Add additional sidecar containers to the APP pods                                                                        | `[]`            |
+| `initContainers`                        | Add additional init containers to the APP pods                                                                           | `[]`            |
+| `command`                               | Override default container command                                                                                       | `[]`            |
+| `args`                                  | Override default container args                                                                                          | `[]`            |
+| `envVars`                               | Environment variables to be set on APP container                                                                         | `nil`           |
+| `envVarsConfigMap`                      | ConfigMap with environment variables                                                                                     | `""`            |
+| `envVarsSecret`                         | Secret with environment variables                                                                                        | `""`            |
 
 ### Autoscaling parameters
 
-| Name                       | Description                                                                                        | Value   |
-|----------------------------|----------------------------------------------------------------------------------------------------|---------|
-| `autoscaling.enabled`      | Enable APP deployment autoscaling (Deploy a HorizontalPodAutoscaler object for the APP deployment) | `false` |
-| `autoscaling.minReplicas`  | Minimum number of replicas to scale back                                                           | `3`     |
-| `autoscaling.maxReplicas`  | Maximum number of replicas to scale out                                                            | `5`     |
-| `autoscaling.targetCPU`    | Define the CPU target to trigger the scaling actions (utilization percentage)                      | `80`    |
-| `autoscaling.targetMemory` | Define the memory target to trigger the scaling actions (utilization percentage)                   | `80`    |
-| `autoscaling.metrics`      | Metrics to use when deciding to scale the deployment (evaluated as a template)                     | `[]`    |
-
+| Name                       | Description                                                                      | Value   |
+| -------------------------- | -------------------------------------------------------------------------------- | ------- |
+| `autoscaling.enabled`      | Deploy a HorizontalPodAutoscaler object for the APP deployment                   | `false` |
+| `autoscaling.minReplicas`  | Minimum number of replicas to scale back                                         | `3`     |
+| `autoscaling.maxReplicas`  | Maximum number of replicas to scale out                                          | `5`     |
+| `autoscaling.targetCPU`    | Define the CPU target to trigger the scaling actions (utilization percentage)    | `80`    |
+| `autoscaling.targetMemory` | Define the memory target to trigger the scaling actions (utilization percentage) | `80`    |
+| `autoscaling.metrics`      | Metrics to use when deciding to scale the deployment (evaluated as a template)   | `[]`    |
 
 ### ConfigMap parameters
 
-| Name                    | Description                                     | Value         |
-|-------------------------|-------------------------------------------------|---------------|
-| `configMap.mounted`     | Mount the ConfigMap in the main container       | `false`       |
-| `configMap.mountPath`   | ConfigMap mount path                            | `/app/config` |
-| `configMap.subPath`     | ConfigMap sub path                              | `""`          |
-| `configMap.data`        | ConfigMap data                                  | `{}`          |
-| `configMap.annotations` | Additional custom annotations for the ConfigMap | `{}`          |
-| `configMap.labels`      | Additional custom labels for the ConfigMap      | `{}`          |
-
+| Name                    | Description                                                                | Value         |
+| ----------------------- | -------------------------------------------------------------------------- | ------------- |
+| `configMap.mounted`     | Mount the ConfigMap as a volume in the main container                      | `false`       |
+| `configMap.mountPath`   | Path to mount the ConfigMap at. Only used when `configMap.mounted` is true | `/app/config` |
+| `configMap.subPath`     | Key of the ConfigMap to mount as a single file instead of the whole volume | `""`          |
+| `configMap.data`        | Store data in key-value pairs                                              | `{}`          |
+| `configMap.annotations` | Additional custom annotations for the ConfigMap                            | `{}`          |
+| `configMap.labels`      | Additional custom labels for the ConfigMap                                 | `{}`          |
 
 ### Secret parameters
 
 | Name                 | Description                                                             | Value    |
-|----------------------|-------------------------------------------------------------------------|----------|
-| `secret.type`        | The type is used to facilitate programmatic handling of the Secret data | `Opaque` |
-| `secret.data`        | Store data in key-value pairs (base64 encoded)                          | `{}`     |
-| `secret.stringData`  | Store data in key-value pairs                                           | `{}`     |
+| -------------------- | ----------------------------------------------------------------------- | -------- |
+| `secret.type`        | the type is used to facilitate programmatic handling of the Secret data | `Opaque` |
+| `secret.data`        | store data in key-value pairs                                           | `{}`     |
+| `secret.stringData`  | store data in key-value pairs                                           | `{}`     |
 | `secret.annotations` | Additional custom annotations for the Secret                            | `{}`     |
 | `secret.labels`      | Additional custom labels for the Secret                                 | `{}`     |
 
+### Ingress parameters
 
-### Traffic Exposure (Ingress) parameters
+| Name                       | Description                                                                                                                      | Value                    |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `ingress.enabled`          | Enable ingress resource for the APP                                                                                              | `false`                  |
+| `ingress.path`             | Path for the default host                                                                                                        | `/`                      |
+| `ingress.apiVersion`       | Override API Version (automatically detected if not set)                                                                         | `""`                     |
+| `ingress.pathType`         | Ingress path type                                                                                                                | `ImplementationSpecific` |
+| `ingress.hostname`         | Default host for the ingress resource, a host pointing to this will be created                                                   | `app.local`              |
+| `ingress.annotations`      | Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations. | `{}`                     |
+| `ingress.ingressClassName` | Set the ingerssClassName on the ingress record for k8s 1.18+                                                                     | `""`                     |
+| `ingress.tls`              | Enable TLS configuration for the hostname defined at ingress.hostname parameter                                                  | `false`                  |
+| `ingress.extraHosts`       | An array with additional hostname(s) to be covered with the ingress record                                                       | `[]`                     |
+| `ingress.extraPaths`       | Any additional arbitrary paths that may need to be added to the ingress under the main host.                                     | `[]`                     |
+| `ingress.selfSigned`       | Create a TLS secret for this ingress record using self-signed certificates generated by Helm                                     | `false`                  |
+| `ingress.extraTls`         | TLS configuration for additional hostname(s) to be covered with this ingress record                                              | `[]`                     |
+| `ingress.secrets`          | If you're providing your own certificates, please use this to add the certificates as secrets                                    | `[]`                     |
+| `ingress.existingSecret`   | It is you own the certificate as secret.                                                                                         | `""`                     |
+| `ingress.extraRules`       | Additional rules to be covered with this ingress record                                                                          | `[]`                     |
 
-| Name                       | Description                                                                                   | Value                    |
-|----------------------------|-----------------------------------------------------------------------------------------------|--------------------------|
-| `ingress.enabled`          | Enable ingress resource for the APP                                                           | `false`                  |
-| `ingress.path`             | Path for the default host                                                                     | `/`                      |
-| `ingress.apiVersion`       | Override API Version (automatically detected if not set)                                      | `""`                     |
-| `ingress.pathType`         | Ingress path type                                                                             | `ImplementationSpecific` |
-| `ingress.hostname`         | Default host for the ingress resource, a host pointing to this will be created                | `app.local`              |
-| `ingress.annotations`      | Additional annotations for the Ingress resource                                               | `{}`                     |
-| `ingress.ingressClassName` | Set the ingerssClassName on the ingress record for k8s 1.18+                                  | `""`                     |
-| `ingress.tls`              | Enable TLS configuration for the hostname defined at ingress.hostname parameter               | `false`                  |
-| `ingress.extraHosts`       | An array with additional hostname(s) to be covered with the ingress record                    | `[]`                     |
-| `ingress.extraPaths`       | Any additional arbitrary paths that may need to be added to the ingress under the main host   | `[]`                     |
-| `ingress.selfSigned`       | Create a TLS secret for this ingress record using self-signed certificates generated by Helm  | `false`                  |
-| `ingress.extraTls`         | TLS configuration for additional hostname(s) to be covered with this ingress record           | `[]`                     |
-| `ingress.secrets`          | If you're providing your own certificates, please use this to add the certificates as secrets | `[]`                     |
-| `ingress.existingSecret`   | It is you own the certificate as secret                                                       | `""`                     |
-| `ingress.extraRules`       | Additional rules to be covered with this ingress record                                       | `[]`                     |
+### Persistence parameters
 
+| Name                        | Description                                                                                             | Value               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------- |
+| `persistence.enabled`       | Enable persistence using Persistent Volume Claims                                                       | `false`             |
+| `persistence.mountPath`     | Path to mount the volume at.                                                                            | `/data`             |
+| `persistence.subPath`       | The subdirectory of the volume to mount to, useful in dev environments and one PV for multiple services | `""`                |
+| `persistence.storageClass`  | Storage class of backing PVC                                                                            | `""`                |
+| `persistence.annotations`   | Persistent Volume Claim annotations                                                                     | `{}`                |
+| `persistence.accessModes`   | Persistent Volume Access Modes                                                                          | `["ReadWriteOnce"]` |
+| `persistence.size`          | Size of data volume                                                                                     | `8Gi`               |
+| `persistence.existingClaim` | The name of an existing PVC to use for persistence                                                      | `""`                |
+| `persistence.selector`      | Selector to match an existing Persistent Volume for WordPress data PVC                                  | `{}`                |
+| `persistence.dataSource`    | Custom PVC data source                                                                                  | `{}`                |
 
-### Traffic Exposure (Service) parameters
+### Service parameters
 
-| Name                               | Description                                                      | Value                                                                     |
-|------------------------------------|------------------------------------------------------------------|---------------------------------------------------------------------------|
-| `service.type`                     | APP service type                                                 | `ClusterIP`                                                               |
-| `service.ports`                    | APP service ports                                                | `[{"name": "http", "protocol": "TCP", "port": 80, "targetPort": "http"}]` |
-| `service.sessionAffinity`          | Control where client requests go, to the same pod or round-robin | `None`                                                                    |
-| `service.clusterIP`                | APP service Cluster IP                                           | `""`                                                                      |
-| `service.loadBalancerIP`           | APP service Load Balancer IP                                     | `""`                                                                      |
-| `service.loadBalancerSourceRanges` | APP service Load Balancer sources                                | `[]`                                                                      |
-| `service.externalTrafficPolicy`    | APP service external traffic policy                              | `Cluster`                                                                 |
-| `service.annotations`              | Additional custom annotations for APP service                    | `{}`                                                                      |
+| Name                               | Description                                                             | Value       |
+| ---------------------------------- | ----------------------------------------------------------------------- | ----------- |
+| `service.type`                     | APP service type                                                        | `ClusterIP` |
+| `service.ports`                    | APP service ports. Each entry takes name, protocol, port and targetPort | `[]`        |
+| `service.sessionAffinity`          | Control where client requests go, to the same pod or round-robin        | `None`      |
+| `service.clusterIP`                | APP service Cluster IP                                                  | `""`        |
+| `service.loadBalancerIP`           | APP service Load Balancer IP                                            | `""`        |
+| `service.loadBalancerSourceRanges` | APP service Load Balancer sources                                       | `[]`        |
+| `service.externalTrafficPolicy`    | APP service external traffic policy                                     | `Cluster`   |
+| `service.annotations`              | Additional custom annotations for APP service                           | `{}`        |
 
+### Metrics parameters
 
-### Prometheus Operator ServiceMonitor parameters
-
-| Name                               | Description                                                                                     | Value     |
-|------------------------------------|-------------------------------------------------------------------------------------------------|-----------|
-| `serviceMonitor.enabled`           | Specify if a ServiceMonitor will be deployed for Prometheus Operator                            | `false`   |
-| `serviceMonitor.namespace`         | Namespace in which Prometheus is running                                                        | `""`      |
-| `serviceMonitor.labels`            | Additional ServiceMonitor labels (evaluated as a template)                                      | `{}`      |
-| `serviceMonitor.annotations`       | Additional ServiceMonitor annotations (evaluated as a template)                                 | `{}`      |
-| `serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in Prometheus                | `""`      |
-| `serviceMonitor.honorLabels`       | The honorLabels chooses the metric's labels on collisions with target labels                    | `false`   |
-| `serviceMonitor.interval`          | How frequently to scrape metrics                                                                | `""`      |
-| `serviceMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                                         | `""`      |
-| `serviceMonitor.metricRelabelings` | Specify additional relabeling of metrics                                                        | `[]`      |
-| `serviceMonitor.relabelings`       | Specify general relabeling                                                                      | `[]`      |
-| `serviceMonitor.selector`          | Prometheus instance selector labels                                                             | `{}`      |
-| `serviceMonitor.namespaceSelector` | The namespaceSelector is a selector for selecting either all namespaces or a list of namespaces | `{}`      |
-| `serviceMonitor.port`              | The port used by ServiceMonitor                                                                 | `http`    |
-| `serviceMonitor.path`              | The path used by ServiceMonitor                                                                 | `metrics` |
-
-### Prometheus Operator PodMonitor parameters
-
-| Name                               | Description                                                                                     | Value     |
-|------------------------------------|-------------------------------------------------------------------------------------------------|-----------|
-| `podMonitor.enabled`           | Specify if a PodMonitor will be deployed for Prometheus Operator                                     | `false`   |
-| `podMonitor.namespace`         | Namespace in which Prometheus is running                                                             | `""`      |
-| `podMonitor.labels`            | Additional PodMonitor labels (evaluated as a template)                                               | `{}`      |
-| `podMonitor.annotations`       | Additional PodMonitor annotations (evaluated as a template)                                          | `{}`      |
-| `podMonitor.jobLabel`          | The name of the label on the target service to use as the job name in Prometheus                     | `""`      |
-| `podMonitor.honorLabels`       | The honorLabels chooses the metric's labels on collisions with target labels                         | `false`   |
-| `podMonitor.interval`          | How frequently to scrape metrics                                                                     | `""`      |
-| `podMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                                              | `""`      |
-| `podMonitor.metricRelabelings` | Specify additional relabeling of metrics                                                             | `[]`      |
-| `podMonitor.relabelings`       | Specify general relabeling                                                                           | `[]`      |
-| `podMonitor.selector`          | Prometheus instance selector labels                                                                  | `{}`      |
-| `podMonitor.namespaceSelector` | The namespaceSelector is a selector for selecting either all namespaces or a list of namespaces      | `{}`      |
-| `podMonitor.port`              | The port used by PodMonitor                                                                          | `http`    |
-| `podMonitor.path`              | The path used by PodMonitor                                                                          | `metrics` |
+| Name                               | Description                                                                      | Value      |
+| ---------------------------------- | -------------------------------------------------------------------------------- | ---------- |
+| `serviceMonitor.enabled`           | Specify if a ServiceMonitor will be deployed for Prometheus Operator             | `false`    |
+| `serviceMonitor.namespace`         | Namespace in which Prometheus is running                                         | `""`       |
+| `serviceMonitor.labels`            | Additional ServiceMonitor labels (evaluated as a template)                       | `{}`       |
+| `serviceMonitor.annotations`       | Additional ServiceMonitor annotations (evaluated as a template)                  | `{}`       |
+| `serviceMonitor.jobLabel`          | The name of the label on the target service to use as the job name in Prometheus | `""`       |
+| `serviceMonitor.honorLabels`       | honorLabels chooses the metric's labels on collisions with target labels         | `false`    |
+| `serviceMonitor.interval`          | How frequently to scrape metrics                                                 | `""`       |
+| `serviceMonitor.scrapeTimeout`     | Timeout after which the scrape is ended                                          | `""`       |
+| `serviceMonitor.metricRelabelings` | Specify additional relabeling of metrics                                         | `[]`       |
+| `serviceMonitor.relabelings`       | Specify general relabeling                                                       | `[]`       |
+| `serviceMonitor.selector`          | Prometheus instance selector labels                                              | `{}`       |
+| `serviceMonitor.namespaceSelector` | is a selector for selecting either all namespaces or a list of namespaces.       | `{}`       |
+| `serviceMonitor.port`              | port used by serviceMonitor                                                      | `http`     |
+| `serviceMonitor.path`              | path used by serviceMonitor                                                      | `/metrics` |
+| `podMonitor.enabled`               | Specify if a PodMonitor will be deployed for Prometheus Operator                 | `false`    |
+| `podMonitor.namespace`             | Namespace in which Prometheus is running                                         | `""`       |
+| `podMonitor.jobLabel`              | The name of the label on the target pod to use as the job name in Prometheus     | `""`       |
+| `podMonitor.port`                  | The port where metrics should be scraped                                         | `http`     |
+| `podMonitor.path`                  | The path where metrics are exposed.                                              | `/metrics` |
+| `podMonitor.interval`              | Scrape interval. Prometheus default used if not set.                             | `30s`      |
+| `podMonitor.scrapeTimeout`         | The timeout duration after which the scrape is ended.                            | `10s`      |
+| `podMonitor.labels`                | Additional PodMonitor labels (evaluated as a template)                           | `{}`       |
+| `podMonitor.relabelings`           | Specify general relabeling                                                       | `[]`       |
+| `podMonitor.metricRelabelings`     | Specify additional relabeling of metrics                                         | `[]`       |
+| `podMonitor.namespaceSelector`     | is a selector for selecting either all namespaces or a list of namespaces.       | `{}`       |
+| `podMonitor.selector`              | is a selector to select which pods will be monitored.                            | `{}`       |
 
 ### ServiceAccount parameters
 
 | Name                                          | Description                                                            | Value   |
-|-----------------------------------------------|------------------------------------------------------------------------|---------|
+| --------------------------------------------- | ---------------------------------------------------------------------- | ------- |
 | `serviceAccount.create`                       | Enable creation of ServiceAccount for APP pods                         | `false` |
-| `serviceAccount.name`                         | The name of the ServiceAccount to use                                  | `""`    |
+| `serviceAccount.name`                         | The name of the ServiceAccount to use.                                 | `""`    |
 | `serviceAccount.automountServiceAccountToken` | Allows auto mount of ServiceAccountToken on the serviceAccount created | `true`  |
 | `serviceAccount.annotations`                  | Additional custom annotations for the ServiceAccount                   | `{}`    |
 | `serviceAccount.labels`                       | Additional custom labels for the ServiceAccount                        | `{}`    |
+
+### CronJob parameters
+
+| Name                                 | Description                                                                                        | Value       |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- | ----------- |
+| `cronjob.enabled`                    | Deploy a CronJob alongside the application                                                         | `false`     |
+| `cronjob.concurrencyPolicy`          | Allow/Forbid/Replace concurrency                                                                   | `Allow`     |
+| `cronjob.schedule`                   | run schedule for the cronjob                                                                       | `""`        |
+| `cronjob.successfulJobsHistoryLimit` | Number of successful finished jobs to retain                                                       | `3`         |
+| `cronjob.podAnnotations`             | Additional annotations for the CronJob pods (evaluated as a template)                              | `{}`        |
+| `cronjob.nodeSelector`               | Node labels for CronJob pod assignment. Only applied when the top-level `nodeSelector` is also set | `{}`        |
+| `cronjob.tolerations`                | Tolerations for CronJob pod assignment. Only applied when the top-level `tolerations` is also set  | `[]`        |
+| `cronjob.restartPolicy`              | Restart policy for the CronJob pod                                                                 | `OnFailure` |
+| `cronjob.podSecurityContext.enabled` | Enable the CronJob pods' Security Context                                                          | `false`     |
+| `cronjob.podSecurityContext.fsGroup` | Set the CronJob pod's Security Context fsGroup                                                     | `0`         |
+| `cronjob.initContainers`             | Add init containers to the CronJob pods                                                            | `[]`        |
+| `cronjob.containers`                 | Add containers to the CronJob pods. This is where the scheduled workload itself is defined         | `[]`        |
+| `cronjob.volumes`                    | Array to add volumes to the CronJob pods (evaluated as a template)                                 | `[]`        |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,

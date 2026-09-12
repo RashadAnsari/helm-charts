@@ -7,7 +7,7 @@ exports:
 
     ## @param global.imageRegistry Global Docker image registry
     ## @param global.imagePullSecrets Global Docker registry secret names as an array
-    ## @param global.storageClass Global StorageClass for Persistent Volume(s)
+    ## @param global.defaultStorageClass Global default StorageClass for Persistent Volume(s)
     ##
     global:
       imageRegistry: ""
@@ -68,7 +68,7 @@ exports:
     ##
     commonAnnotations: {}
 
-    ## @section Helmet parameters
+    ## @section Image parameters
 
     ## Helmet (App) image version
     ## ref: https://kubernetes.io/docs/concepts/containers/images
@@ -99,6 +99,8 @@ exports:
       ##
       pullSecrets: []
 
+    ## @section Deployment parameters
+
     ## @param replicaCount Number of APP replicas
     ## Note: ReadWriteMany PVCs are required to scale
     ##
@@ -108,8 +110,8 @@ exports:
     ##
     revisionHistoryLimit: 10
 
-    ## List of ports to expose from the container.
     ## ref: https://kubernetes.io/docs/concepts/services-networking/connect-applications-service
+    ## @param ports [array] List of ports to expose from the container. Each entry takes name, containerPort and protocol
     ##
     ports:
       - name: http
@@ -118,12 +120,10 @@ exports:
 
     ## Configure extra options for liveness probe
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-    ## @param livenessProbe.enabled Enable livenessProbe
-    ## @param livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
-    ## @param livenessProbe.periodSeconds Period seconds for livenessProbe
-    ## @param livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
-    ## @param livenessProbe.failureThreshold Failure threshold for livenessProbe
-    ## @param livenessProbe.successThreshold Success threshold for livenessProbe
+    ## Every key except `enabled` is rendered into the container's livenessProbe verbatim,
+    ## so the whole Kubernetes probe spec is available. Setting `enabled: true` without any
+    ## probe fields alongside it emits no probe at all.
+    ## @param livenessProbe.enabled Enable livenessProbe on the main container. Define the probe itself alongside this key
     ##
     ## Example:
     ## livenessProbe:
@@ -153,12 +153,10 @@ exports:
 
     ## Configure extra options for readiness probe
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-    ## @param readinessProbe.enabled Enable readinessProbe
-    ## @param readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
-    ## @param readinessProbe.periodSeconds Period seconds for readinessProbe
-    ## @param readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
-    ## @param readinessProbe.failureThreshold Failure threshold for readinessProbe
-    ## @param readinessProbe.successThreshold Success threshold for readinessProbe
+    ## Every key except `enabled` is rendered into the container's readinessProbe verbatim,
+    ## so the whole Kubernetes probe spec is available. Setting `enabled: true` without any
+    ## probe fields alongside it emits no probe at all.
+    ## @param readinessProbe.enabled Enable readinessProbe on the main container. Define the probe itself alongside this key
     ##
     ## Example:
     ## readinessProbe:
@@ -188,13 +186,10 @@ exports:
 
     ## Configure extra options for startup probe
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
-    ## @param startupProbe.enabled Enable startupProbe
-    ## @param startupProbe.httpGet.path Request path for startupProbe
-    ## @param startupProbe.initialDelaySeconds Initial delay seconds for startupProbe
-    ## @param startupProbe.periodSeconds Period seconds for startupProbe
-    ## @param startupProbe.timeoutSeconds Timeout seconds for startupProbe
-    ## @param startupProbe.failureThreshold Failure threshold for startupProbe
-    ## @param startupProbe.successThreshold Success threshold for startupProbe
+    ## Every key except `enabled` is rendered into the container's startupProbe verbatim,
+    ## so the whole Kubernetes probe spec is available. Setting `enabled: true` without any
+    ## probe fields alongside it emits no probe at all.
+    ## @param startupProbe.enabled Enable startupProbe on the main container. Define the probe itself alongside this key
     ##
     ## Example:
     ## startupProbe:
@@ -224,7 +219,7 @@ exports:
 
     ## Configure pod Restart Policy
     ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy
-    ## @param RestartPolicy Restart policy for all containers within the pod
+    ## @param podRestartPolicy Restart policy for all containers within the pod
     podRestartPolicy: Always
 
     ## Configure APP pods Security Context
@@ -352,8 +347,7 @@ exports:
     ##
     terminationGracePeriodSeconds: ""
 
-    ## @param updateStrategy.type APP deployment strategy type
-    ## @param updateStrategy.rollingUpdate APP deployment rolling update configuration parameters
+    ## @param updateStrategy.type APP deployment strategy type. Add `rollingUpdate` alongside it to tune maxSurge and maxUnavailable
     ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
     ##
     updateStrategy:
@@ -429,6 +423,8 @@ exports:
     ##
     envVarsSecret: ""
 
+    ## @section Autoscaling parameters
+
     ## Add an horizontal pod autoscaler
     ## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
     ## @param autoscaling.enabled Deploy a HorizontalPodAutoscaler object for the APP deployment
@@ -446,14 +442,22 @@ exports:
       targetMemory: 80
       metrics: []
 
+    ## @section ConfigMap parameters
+
     ## Configure the ConfigMap resource that allows you to store non-confidential data in key-value pairs.
     ## ref: https://kubernetes.io/docs/concepts/configuration/configmap/
     ##
     configMap:
+      ## @param configMap.mounted Mount the ConfigMap as a volume in the main container
+      ##
       mounted: false
+      ## @param configMap.mountPath Path to mount the ConfigMap at. Only used when `configMap.mounted` is true
+      ##
       mountPath: "/app/config"
+      ## @param configMap.subPath Key of the ConfigMap to mount as a single file instead of the whole volume
+      ##
       subPath: ""
-      ## @param configMap.data store data in key-value pairs
+      ## @param configMap.data Store data in key-value pairs
       ##
       ## e.g:
       ## data:
@@ -464,13 +468,15 @@ exports:
       ##
       data: {}
 
-      ## @param secret.annotations Additional custom annotations for the ConfigMap
+      ## @param configMap.annotations Additional custom annotations for the ConfigMap
       ##
       annotations: {}
 
-      ## @param secret.labels Additional custom labels for the ConfigMap
+      ## @param configMap.labels Additional custom labels for the ConfigMap
       ##
       labels: {}
+
+    ## @section Secret parameters
 
     ## Configure the Secret resource that allows you to store a small amount of sensitive data such as a password, a token, or a key.
     ## ref: https://kubernetes.io/docs/concepts/configuration/secret
@@ -502,6 +508,8 @@ exports:
       ## @param secret.labels Additional custom labels for the Secret
       ##
       labels: {}
+
+    ## @section Ingress parameters
 
     ## Configure the ingress resource that allows you to access the APP
     ## ref: https://kubernetes.io/docs/user-guide/ingress/
@@ -619,6 +627,8 @@ exports:
       ##
       extraRules: []
 
+    ## @section Persistence parameters
+
     ## Enable persistence using Persistent Volume Claims
     ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
     ##
@@ -665,6 +675,8 @@ exports:
       ##
       dataSource: {}
 
+    ## @section Service parameters
+
     ## APP service parameters
     ##
     service:
@@ -672,7 +684,7 @@ exports:
       ##
       type: ClusterIP
 
-      ## @param service.ports APP service ports
+      ## @param service.ports [array] APP service ports. Each entry takes name, protocol, port and targetPort
       ##
       ports:
         - name: http
@@ -713,6 +725,8 @@ exports:
       ## @param service.annotations Additional custom annotations for APP service
       ##
       annotations: {}
+
+    ## @section Metrics parameters
 
     ## Prometheus Operator ServiceMonitor configuration
     ##
@@ -781,7 +795,7 @@ exports:
     ## Prometheus Operator PodMonitor configuration
     ##
     podMonitor:
-      ## @param podMonitor.enabled - Whether or not the PodMonitor should be created.
+      ## @param podMonitor.enabled Specify if a PodMonitor will be deployed for Prometheus Operator
       ##
       enabled: false
 
@@ -789,11 +803,12 @@ exports:
       ##
       namespace: ""
 
-      ## @param podMonitor.jobLabel Namespace in which Prometheus is running
+      ## @param podMonitor.jobLabel The name of the label on the target pod to use as the job name in Prometheus
       ##
       jobLabel: ""
 
-      #@param podMonitor.port The port where metrics should be scraped.
+      ## @param podMonitor.port The port where metrics should be scraped
+      ##
       port: "http"
 
       ## @param podMonitor.path The path where metrics are exposed.
@@ -828,6 +843,8 @@ exports:
       ##
       selector: {}
 
+    ## @section ServiceAccount parameters
+
     ## Service account for APP pods to use.
     ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
     ##
@@ -854,11 +871,13 @@ exports:
       ##
       labels: {}
 
+    ## @section CronJob parameters
+
     ## Cronjob: create jobs on a repeated schedule
     ## Ref: https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/
     ##
     cronjob:
-      ## @param cronjob.enabled
+      ## @param cronjob.enabled Deploy a CronJob alongside the application
       ##
       enabled: false
 
@@ -871,35 +890,40 @@ exports:
       ##
       schedule: ""
 
-      ## @param cronjob.successfulJobsHistoryLimit
+      ## @param cronjob.successfulJobsHistoryLimit Number of successful finished jobs to retain
       ##
       successfulJobsHistoryLimit: 3
 
-      ## @param nodeSelector Node labels for pod assignment.
+      ## @param cronjob.podAnnotations Additional annotations for the CronJob pods (evaluated as a template)
+      ## ref: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+      ##
+      podAnnotations: {}
+
+      ## @param cronjob.nodeSelector Node labels for CronJob pod assignment. Only applied when the top-level `nodeSelector` is also set
       ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
       ##
       nodeSelector: {}
 
-      ## @param tolerations Tolerations for pod assignment.
+      ## @param cronjob.tolerations Tolerations for CronJob pod assignment. Only applied when the top-level `tolerations` is also set
       ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
       ##
       tolerations: []
 
-      ## @param restartPolicy Restart conditions
+      ## @param cronjob.restartPolicy Restart policy for the CronJob pod
       ## Ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy
       ##
       restartPolicy: OnFailure
 
-      ## Configure APP pods Security Context
+      ## Configure the CronJob pods Security Context
       ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
-      ## @param podSecurityContext.enabled Enabled APP pods' Security Context
-      ## @param podSecurityContext.fsGroup Set APP pod's Security Context fsGroup
+      ## @param cronjob.podSecurityContext.enabled Enable the CronJob pods' Security Context
+      ## @param cronjob.podSecurityContext.fsGroup Set the CronJob pod's Security Context fsGroup
       ##
       podSecurityContext:
         enabled: false
         fsGroup: 0
 
-      ## @param initContainers Add additional init containers to the APP pods
+      ## @param cronjob.initContainers Add init containers to the CronJob pods
       ## Example:
       ## initContainers:
       ##   - name: your-image-name
@@ -911,7 +935,7 @@ exports:
       ##
       initContainers: []
 
-      ## @param containers Add additional containers to the APP pods
+      ## @param cronjob.containers Add containers to the CronJob pods. This is where the scheduled workload itself is defined
       ## Example:
       ## containers:
       ##   - name: your-image-name
@@ -923,7 +947,7 @@ exports:
       ##
       containers: []
 
-      ## @param volumes Array to add volumes (evaluated as a template)
+      ## @param cronjob.volumes Array to add volumes to the CronJob pods (evaluated as a template)
       ## Example:
       ## volumes:
       ##   - name: vol-conf

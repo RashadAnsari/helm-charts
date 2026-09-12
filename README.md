@@ -65,7 +65,7 @@ $ helm dependency update
 $ helm install my-app .
 ```
 
-Those ten lines of `values.yaml` render a Deployment, a Service and an Ingress, wired together with matching labels, selectors and ports. The full example lives in [charts/helmet/examples/simple](charts/helmet/examples/simple).
+Those ten lines of `values.yaml` render a Deployment, a Service and an Ingress, wired together with matching labels, selectors and ports. Two runnable charts are in [charts/helmet/examples](charts/helmet/examples): `simple` is the one above, and `full` exercises probes, persistence, autoscaling, monitoring and a CronJob.
 
 ## What helmet renders
 

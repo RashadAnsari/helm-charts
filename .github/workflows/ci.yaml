@@ -11,6 +11,7 @@ on:
 env:
   HELM_VERSION: v3.22.0
   OCI_REPOSITORY: charts
+  README_GENERATOR_VERSION: 2.7.2
 
 jobs:
   check:
@@ -36,6 +37,12 @@ jobs:
         working-directory: ./charts
         run: |
           helm lint helmet
+
+      # Regenerates each chart's parameter table from the @param annotations in
+      # values.yaml and fails if the committed README differs. Also fails when
+      # an annotation names a value that does not exist, or a value has none.
+      - name: Check README parameter tables are in sync
+        run: make readme-check
 
   publish:
     name: Publish

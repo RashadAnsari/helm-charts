@@ -1,10 +1,18 @@
+# The smallest chart helmet can build a working service from.
+# Everything not set here falls back to helmet's defaults, imported through
+# `import-values: [defaults]` in Chart.yaml.
+
+# Setting a repository is what makes helmet render the Deployment at all.
 image:
   repository: nginx
 
+# Container ports. The name is referenced by service.ports[].targetPort,
+# which helmet already defaults to `http`.
 ports:
   - name: http
     containerPort: 80
     protocol: TCP
 
+# Renders an Ingress for the default hostname, app.local.
 ingress:
   enabled: true

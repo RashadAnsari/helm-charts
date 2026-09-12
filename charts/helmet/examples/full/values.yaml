@@ -1,0 +1,134 @@
+# Exercises most of what helmet renders. Every block here is optional; delete
+# any of them and the matching resource stops being generated.
+
+image:
+  registry: docker.io
+  repository: nginx
+  tag: "1.29-alpine"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+ports:
+  - name: http
+    containerPort: 8080
+    protocol: TCP
+
+command: ["nginx"]
+args: ["-g", "daemon off;"]
+
+# Probes: only `enabled` is a helmet parameter. Every other key is passed
+# through to Kubernetes untouched, so the whole probe spec is available.
+livenessProbe:
+  enabled: true
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+
+readinessProbe:
+  enabled: true
+  httpGet:
+    path: /ready
+    port: http
+  periodSeconds: 5
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+podSecurityContext:
+  enabled: true
+  fsGroup: 1001
+
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsNonRoot: true
+
+# Plain environment variables. A list of {name, value} works here too.
+envVars:
+  LOG_LEVEL: info
+  LISTEN_PORT: "8080"
+
+# Rendered as a ConfigMap and mounted at configMap.mountPath.
+configMap:
+  mounted: true
+  mountPath: /app/config
+  data:
+    app.yaml: |
+      mode: production
+      timeout: 30s
+
+# Rendered as a Secret. Use `data` instead if your values are base64 encoded.
+secret:
+  stringData:
+    API_TOKEN: replace-me
+
+# Mounts a PersistentVolumeClaim. Set persistence.existingClaim to reuse one.
+persistence:
+  enabled: true
+  mountPath: /data
+  size: 1Gi
+  accessModes:
+    - ReadWriteOnce
+
+# Replaces replicaCount once enabled.
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPU: 70
+
+service:
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+
+ingress:
+  enabled: true
+  hostname: full.example.com
+  ingressClassName: nginx
+  tls: true
+  # Asks Helm to generate a self-signed certificate. Drop this and supply
+  # ingress.secrets or ingress.existingSecret to bring your own.
+  selfSigned: true
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 16m
+
+serviceAccount:
+  create: true
+  automountServiceAccountToken: false
+
+# Needs the Prometheus Operator CRDs installed in the cluster.
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  port: http
+  path: /metrics
+
+# The scheduled workload is defined by cronjob.containers, not by the image
+# settings above.
+cronjob:
+  enabled: true
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  containers:
+    - name: prune
+      image: alpine:3.22
+      command: ["/bin/sh", "-c", "echo pruning"]
+
+podLabels:
+  team: platform
+
+commonAnnotations:
+  example.com/owner: platform-team
