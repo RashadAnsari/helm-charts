@@ -52,11 +52,11 @@ exports:
     ##
     clusterDomain: cluster.local
 
-    ## @param annotations Additional annotations to be added to the App Deployment or Statefulset. Evaluated as a template
+    ## @param annotations Additional annotations to be added to the App Deployment. Evaluated as a template
     ##
     annotations: {}
 
-    ## @param labels Additional labels to be added to the App Deployment or Statefulset. Evaluated as a template
+    ## @param labels Additional labels to be added to the App Deployment. Evaluated as a template
     ##
     labels: {}
 
@@ -698,6 +698,11 @@ exports:
       ##
       sessionAffinity: None
 
+      ## @param service.sessionAffinityConfig Additional settings for the sessionAffinity (evaluated as a template)
+      ## ref: https://kubernetes.io/docs/reference/networking/virtual-ips/#session-stickiness-timeout
+      ##
+      sessionAffinityConfig: {}
+
       ## @param service.clusterIP APP service Cluster IP
       ## e.g.:
       ## clusterIP: None
@@ -807,6 +812,14 @@ exports:
       ##
       jobLabel: ""
 
+      ## @param podMonitor.annotations Additional PodMonitor annotations (evaluated as a template)
+      ##
+      annotations: {}
+
+      ## @param podMonitor.honorLabels honorLabels chooses the metric's labels on collisions with target labels
+      ##
+      honorLabels: false
+
       ## @param podMonitor.port The port where metrics should be scraped
       ##
       port: "http"
@@ -899,12 +912,12 @@ exports:
       ##
       podAnnotations: {}
 
-      ## @param cronjob.nodeSelector Node labels for CronJob pod assignment. Only applied when the top-level `nodeSelector` is also set
+      ## @param cronjob.nodeSelector Node labels for CronJob pod assignment. Falls back to the top-level `nodeSelector` when empty
       ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
       ##
       nodeSelector: {}
 
-      ## @param cronjob.tolerations Tolerations for CronJob pod assignment. Only applied when the top-level `tolerations` is also set
+      ## @param cronjob.tolerations Tolerations for CronJob pod assignment. Falls back to the top-level `tolerations` when empty
       ## Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
       ##
       tolerations: []

@@ -44,6 +44,16 @@ Naming, label and capability helpers come from [bitnami/common](https://github.c
 
 To include only part of the set, call the individual templates instead of `helmet.app`: `helmet.deployment`, `helmet.service`, `helmet.ingress`, `helmet.hpa`, `helmet.configmap`, `helmet.secret`, `helmet.persistence`, `helmet.serviceaccount`, `helmet.servicemonitor`, `helmet.podmonitor` and `helmet.cronjob`.
 
+### Install notes
+
+`helmet.notes` prints the post-install message telling the user how to reach the application, picking the right instructions for your `ingress.enabled` and `service.type`. It is not part of `helmet.app`, so add it to your own `NOTES.txt`:
+
+```
+# file: templates/NOTES.txt
+
+{{ include "helmet.notes" . }}
+```
+
 ## Prerequisites
 
 - Kubernetes 1.23+
@@ -56,7 +66,7 @@ To include only part of the set, call the individual templates instead of `helme
 
 dependencies:
   - name: helmet
-    version: 0.15.0
+    version: 0.16.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults
@@ -118,8 +128,8 @@ Two runnable charts are in [examples](examples): `simple` is the chart above, an
 | `fullnameOverride`  | String to fully override common.names.fullname template with a string                                      | `""`            |
 | `namespaceOverride` | String to fully override common.names.namespace template with a string                                     | `""`            |
 | `clusterDomain`     | Kubernetes Cluster Domain name                                                                             | `cluster.local` |
-| `annotations`       | Additional annotations to be added to the App Deployment or Statefulset. Evaluated as a template           | `{}`            |
-| `labels`            | Additional labels to be added to the App Deployment or Statefulset. Evaluated as a template                | `{}`            |
+| `annotations`       | Additional annotations to be added to the App Deployment. Evaluated as a template                          | `{}`            |
+| `labels`            | Additional labels to be added to the App Deployment. Evaluated as a template                               | `{}`            |
 | `commonLabels`      | Labels to be added to all deployed resources                                                               | `{}`            |
 | `commonAnnotations` | Annotations to be added to all deployed resources                                                          | `{}`            |
 
@@ -253,6 +263,7 @@ Two runnable charts are in [examples](examples): `simple` is the chart above, an
 | `service.type`                     | APP service type                                                        | `ClusterIP` |
 | `service.ports`                    | APP service ports. Each entry takes name, protocol, port and targetPort | `[]`        |
 | `service.sessionAffinity`          | Control where client requests go, to the same pod or round-robin        | `None`      |
+| `service.sessionAffinityConfig`    | Additional settings for the sessionAffinity (evaluated as a template)   | `{}`        |
 | `service.clusterIP`                | APP service Cluster IP                                                  | `""`        |
 | `service.loadBalancerIP`           | APP service Load Balancer IP                                            | `""`        |
 | `service.loadBalancerSourceRanges` | APP service Load Balancer sources                                       | `[]`        |
@@ -280,6 +291,8 @@ Two runnable charts are in [examples](examples): `simple` is the chart above, an
 | `podMonitor.enabled`               | Specify if a PodMonitor will be deployed for Prometheus Operator                 | `false`    |
 | `podMonitor.namespace`             | Namespace in which Prometheus is running                                         | `""`       |
 | `podMonitor.jobLabel`              | The name of the label on the target pod to use as the job name in Prometheus     | `""`       |
+| `podMonitor.annotations`           | Additional PodMonitor annotations (evaluated as a template)                      | `{}`       |
+| `podMonitor.honorLabels`           | honorLabels chooses the metric's labels on collisions with target labels         | `false`    |
 | `podMonitor.port`                  | The port where metrics should be scraped                                         | `http`     |
 | `podMonitor.path`                  | The path where metrics are exposed.                                              | `/metrics` |
 | `podMonitor.interval`              | Scrape interval. Prometheus default used if not set.                             | `30s`      |
@@ -302,21 +315,21 @@ Two runnable charts are in [examples](examples): `simple` is the chart above, an
 
 ### CronJob parameters
 
-| Name                                 | Description                                                                                        | Value       |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------- | ----------- |
-| `cronjob.enabled`                    | Deploy a CronJob alongside the application                                                         | `false`     |
-| `cronjob.concurrencyPolicy`          | Allow/Forbid/Replace concurrency                                                                   | `Allow`     |
-| `cronjob.schedule`                   | run schedule for the cronjob                                                                       | `""`        |
-| `cronjob.successfulJobsHistoryLimit` | Number of successful finished jobs to retain                                                       | `3`         |
-| `cronjob.podAnnotations`             | Additional annotations for the CronJob pods (evaluated as a template)                              | `{}`        |
-| `cronjob.nodeSelector`               | Node labels for CronJob pod assignment. Only applied when the top-level `nodeSelector` is also set | `{}`        |
-| `cronjob.tolerations`                | Tolerations for CronJob pod assignment. Only applied when the top-level `tolerations` is also set  | `[]`        |
-| `cronjob.restartPolicy`              | Restart policy for the CronJob pod                                                                 | `OnFailure` |
-| `cronjob.podSecurityContext.enabled` | Enable the CronJob pods' Security Context                                                          | `false`     |
-| `cronjob.podSecurityContext.fsGroup` | Set the CronJob pod's Security Context fsGroup                                                     | `0`         |
-| `cronjob.initContainers`             | Add init containers to the CronJob pods                                                            | `[]`        |
-| `cronjob.containers`                 | Add containers to the CronJob pods. This is where the scheduled workload itself is defined         | `[]`        |
-| `cronjob.volumes`                    | Array to add volumes to the CronJob pods (evaluated as a template)                                 | `[]`        |
+| Name                                 | Description                                                                                   | Value       |
+| ------------------------------------ | --------------------------------------------------------------------------------------------- | ----------- |
+| `cronjob.enabled`                    | Deploy a CronJob alongside the application                                                    | `false`     |
+| `cronjob.concurrencyPolicy`          | Allow/Forbid/Replace concurrency                                                              | `Allow`     |
+| `cronjob.schedule`                   | run schedule for the cronjob                                                                  | `""`        |
+| `cronjob.successfulJobsHistoryLimit` | Number of successful finished jobs to retain                                                  | `3`         |
+| `cronjob.podAnnotations`             | Additional annotations for the CronJob pods (evaluated as a template)                         | `{}`        |
+| `cronjob.nodeSelector`               | Node labels for CronJob pod assignment. Falls back to the top-level `nodeSelector` when empty | `{}`        |
+| `cronjob.tolerations`                | Tolerations for CronJob pod assignment. Falls back to the top-level `tolerations` when empty  | `[]`        |
+| `cronjob.restartPolicy`              | Restart policy for the CronJob pod                                                            | `OnFailure` |
+| `cronjob.podSecurityContext.enabled` | Enable the CronJob pods' Security Context                                                     | `false`     |
+| `cronjob.podSecurityContext.fsGroup` | Set the CronJob pod's Security Context fsGroup                                                | `0`         |
+| `cronjob.initContainers`             | Add init containers to the CronJob pods                                                       | `[]`        |
+| `cronjob.containers`                 | Add containers to the CronJob pods. This is where the scheduled workload itself is defined    | `[]`        |
+| `cronjob.volumes`                    | Array to add volumes to the CronJob pods (evaluated as a template)                            | `[]`        |
 
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
@@ -386,7 +399,7 @@ If you are going to use Helm to manage the certificates, please copy these value
 
 If you are going to manage TLS secrets outside of Helm, please know that you can create a TLS secret (named `app.local-tls` for example).
 
-Please see [this example](https://github.com/kubernetes/contrib/tree/master/ingress/controllers/nginx/examples/tls) for more information.
+See the [Kubernetes TLS Ingress documentation](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls) for more information.
 
 ### Adding environment variables
 

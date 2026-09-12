@@ -122,6 +122,14 @@ cronjob:
   schedule: "*/15 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
+  restartPolicy: OnFailure
+  # The CronJob pod has its own security context. It does not inherit the
+  # podSecurityContext above.
+  podSecurityContext:
+    enabled: true
+    fsGroup: 1001
+  # nodeSelector and tolerations are omitted here, so the CronJob inherits
+  # whatever the top-level keys are set to.
   containers:
     - name: prune
       image: alpine:3.22

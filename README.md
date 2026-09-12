@@ -29,7 +29,7 @@ version: "0.1.0"
 
 dependencies:
   - name: helmet
-    version: 0.15.0
+    version: 0.16.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values:
       - defaults # Required to inherit helmet's default values
@@ -85,7 +85,7 @@ Those ten lines of `values.yaml` render a Deployment, a Service and an Ingress, 
 | PodMonitor                | `podMonitor.enabled`                        |
 | CronJob                   | `cronjob.enabled`                           |
 
-Behind those toggles sit 154 documented parameters covering probes, affinity presets, security contexts, sidecars, init containers, TLS secrets and self-signed certificates. See the [helmet reference](charts/helmet/README.md) for the full table, which is generated from `values.yaml` and checked in CI.
+Behind those toggles sit 157 documented parameters covering probes, affinity presets, security contexts, sidecars, init containers, TLS secrets and self-signed certificates. See the [helmet reference](charts/helmet/README.md) for the full table, which is generated from `values.yaml` and checked in CI.
 
 Naming, labels and capability detection come from [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common) 2.29.1, so resource names and the `app.kubernetes.io` labels follow the same conventions as the Bitnami catalog.
 
@@ -101,7 +101,7 @@ Charts are distributed as OCI artifacts, which Helm supports natively from 3.8 o
 There is no `helm repo add` step. OCI charts are referenced by their full registry path:
 
 ```bash
-$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.15.0
+$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.16.0
 ```
 
 The packages are public, so pulling needs no authentication. Packaged `.tgz` files are also attached to every [GitHub release](https://github.com/RashadAnsari/helm-charts/releases).
@@ -117,9 +117,16 @@ To ship a change, bump `version` in the chart's `Chart.yaml` and merge. Versions
 Issues and pull requests are welcome. Run the same checks CI does before opening one:
 
 ```bash
-$ helm dependency build charts/helmet
-$ helm lint charts/helmet
+$ make check
 ```
+
+That lints every chart and verifies the parameter tables still match `values.yaml`. If you changed a `## @param` annotation, regenerate the tables and commit the result:
+
+```bash
+$ make readme
+```
+
+`make help` lists the rest.
 
 ## License
 

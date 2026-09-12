@@ -18,9 +18,14 @@ APP VERSION: {{ .Chart.AppVersion }}
   NOTE: It may take a few minutes for the LoadBalancer IP to be available.
         Watch the status with: 'kubectl get svc --namespace {{ include "common.names.namespace" . }} -w {{ include "common.names.fullname" . }}'
   export SERVICE_IP=$(kubectl get svc --namespace {{ include "common.names.namespace" . }} {{ include "common.names.fullname" . }} --template "{{ "{{ range (index .status.loadBalancer.ingress 0) }}{{ . }}{{ end }}" }}")
-{{- $port:=(coalesce .Values.service.ports.http .Values.service.port) | toString }}
-  echo "{{ .Chart.Name }} URL: http://$SERVICE_IP{{- if ne $port "80" }}:{{ coalesce .Values.service.ports.http .Values.service.port }}{{ end }}/"
+{{- $port := (first .Values.service.ports).port | toString }}
+  echo "{{ .Chart.Name }} URL: http://$SERVICE_IP{{- if ne $port "80" }}:{{ $port }}{{ end }}/"
 {{- else if eq .Values.service.type "ClusterIP" }}
+
+  Inside the cluster, reach it at:
+  {{ include "common.names.fullname" . }}.{{ include "common.names.namespace" . }}.svc.{{ .Values.clusterDomain }}:{{ (first .Values.service.ports).port }}
+
+  From your machine, forward a local port:
 
   export POD_NAME=$(kubectl get pods --namespace {{ include "common.names.namespace" . }} -l "app.kubernetes.io/name={{ include "common.names.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
   export CONTAINER_PORT=$(kubectl get pod --namespace {{ include "common.names.namespace" . }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
