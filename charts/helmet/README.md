@@ -56,7 +56,7 @@ To include only part of the set, call the individual templates instead of `helme
 
 dependencies:
   - name: helmet
-    version: 0.14.0
+    version: 0.15.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults

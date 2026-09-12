@@ -23,7 +23,7 @@ Both examples pull helmet from `oci://ghcr.io/rashadansari/charts`. To try local
 # Chart.yaml
 dependencies:
   - name: helmet
-    version: 0.14.0
+    version: 0.15.0
     repository: file://../..
     import-values:
       - defaults

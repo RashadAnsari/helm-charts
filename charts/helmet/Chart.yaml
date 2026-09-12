@@ -5,8 +5,8 @@ home: https://github.com/RashadAnsari/helm-charts/blob/main/charts/helmet
 sources:
   - https://github.com/RashadAnsari/helm-charts
 type: library
-version: "0.14.0"
-appVersion: "0.14.0"
+version: "0.15.0"
+appVersion: "0.15.0"
 keywords:
   - common
   - helper
