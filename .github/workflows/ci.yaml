@@ -12,6 +12,7 @@ env:
   HELM_VERSION: v3.22.0
   OCI_REPOSITORY: charts
   README_GENERATOR_VERSION: 2.7.2
+  KUBECONFORM_VERSION: v0.8.0
 
 jobs:
   check:
@@ -28,21 +29,31 @@ jobs:
         with:
           version: ${{ env.HELM_VERSION }}
 
-      - name: Helm Build Dependencies
-        working-directory: ./charts
+      - name: Install kubeconform
         run: |
-          helm dependency build helmet
+          set -euo pipefail
+          curl -sfL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin kubeconform
+          kubeconform -v
 
       - name: Helm lint
-        working-directory: ./charts
-        run: |
-          helm lint helmet
+        run: make lint
 
       # Regenerates each chart's parameter table from the @param annotations in
       # values.yaml and fails if the committed README differs. Also fails when
       # an annotation names a value that does not exist, or a value has none.
       - name: Check README parameter tables are in sync
         run: make readme-check
+
+      - name: Check values schemas are in sync
+        run: make schema-check
+
+      # Every template in charts/*/templates is an unrendered partial, so lint
+      # alone proves nothing. This packages the local chart, renders each
+      # example against it at every supported Kubernetes version, and validates
+      # the result against the real API schemas.
+      - name: Render examples and validate manifests
+        run: make conform
 
   publish:
     name: Publish
@@ -89,7 +100,12 @@ jobs:
             helm package "$chart" --destination dist
 
             helm push "dist/${name}-${version}.tgz" "oci://${registry}"
-            gh release create "${name}-${version}" "dist/${name}-${version}.tgz" \
+            # The schema ships as its own asset so consumers can drop it into
+            # their application chart, where Helm will actually enforce it.
+            cp "${chart}values.schema.json" "dist/${name}-${version}-values.schema.json"
+            gh release create "${name}-${version}" \
+              "dist/${name}-${version}.tgz" \
+              "dist/${name}-${version}-values.schema.json" \
               --title "${name} ${version}" \
               --generate-notes
           done

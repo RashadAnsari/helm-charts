@@ -29,7 +29,7 @@ version: "0.1.0"
 
 dependencies:
   - name: helmet
-    version: 0.17.0
+    version: 0.18.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values:
       - defaults # Required to inherit helmet's default values
@@ -105,7 +105,7 @@ Charts are distributed as OCI artifacts, which Helm supports natively from 3.8 o
 There is no `helm repo add` step. OCI charts are referenced by their full registry path:
 
 ```bash
-$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.17.0
+$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.18.0
 ```
 
 The packages are public, so pulling needs no authentication. Packaged `.tgz` files are also attached to every [GitHub release](https://github.com/RashadAnsari/helm-charts/releases).

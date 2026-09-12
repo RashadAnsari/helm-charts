@@ -89,7 +89,7 @@ exports:
       ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
       ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
       ##
-      pullPolicy: null
+      pullPolicy: ""
 
       ## Optionally specify an array of imagePullSecrets (secrets must be manually created in the namespace)
       ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
@@ -433,7 +433,7 @@ exports:
     ##     valueFrom:
     ##       configMapRef: ...
     ##
-    envVars: null
+    envVars: {}
 
     ## @param envVarsConfigMap ConfigMap with environment variables
     ##
@@ -862,7 +862,7 @@ exports:
 
       ## @param podMonitor.relabelings [array] Specify general relabeling
       ##
-      relabelings: {}
+      relabelings: []
 
       ## @param podMonitor.metricRelabelings [array] Specify additional relabeling of metrics
       ##

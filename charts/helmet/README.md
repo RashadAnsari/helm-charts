@@ -64,6 +64,28 @@ Naming, label and capability helpers come from [bitnami/common](https://github.c
 
 To include only part of the set, call the individual templates instead of `helmet.app`: `helmet.deployment`, `helmet.statefulset`, `helmet.service`, `helmet.service.headless`, `helmet.ingress`, `helmet.hpa`, `helmet.configmap`, `helmet.secret`, `helmet.persistence`, `helmet.serviceaccount`, `helmet.servicemonitor`, `helmet.podmonitor` and `helmet.cronjob`.
 
+### Validating your values
+
+[`values.schema.json`](values.schema.json) is generated from the same annotations as the parameter table below, and describes the type of every value helmet accepts.
+
+Helm applies a chart's schema to that chart's own values. Helmet keeps its values under `exports.defaults`, so the schema does nothing while it sits here. To get validation, drop it into your application chart, next to your `values.yaml`:
+
+```shell
+$ curl -sfLO https://github.com/RashadAnsari/helm-charts/releases/download/helmet-0.18.0/helmet-0.18.0-values.schema.json
+$ mv helmet-0.18.0-values.schema.json values.schema.json
+```
+
+Helm then checks your `values.yaml` on every `template`, `install` and `upgrade`:
+
+```console
+$ helm template my-app . --set replicaCount=two
+Error: values don't meet the specifications of the schema(s) in the following chart(s):
+my-app:
+- at '/replicaCount': got string, want number
+```
+
+The file is also attached to each [release](https://github.com/RashadAnsari/helm-charts/releases).
+
 ### Install notes
 
 `helmet.notes` prints the post-install message telling the user how to reach the application, picking the right instructions for your `ingress.enabled` and `service.type`. It is not part of `helmet.app`, so add it to your own `NOTES.txt`:
@@ -86,7 +108,7 @@ To include only part of the set, call the individual templates instead of `helme
 
 dependencies:
   - name: helmet
-    version: 0.17.0
+    version: 0.18.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults
@@ -161,7 +183,7 @@ Three runnable charts are in [examples](examples): `simple` is the chart above, 
 | `image.repository`  | Image repository                                                                                | `""`        |
 | `image.tag`         | Image tag (immutable tags are recommended)                                                      | `latest`    |
 | `image.digest`      | Image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag | `""`        |
-| `image.pullPolicy`  | Image pull policy                                                                               | `nil`       |
+| `image.pullPolicy`  | Image pull policy                                                                               | `""`        |
 | `image.pullSecrets` | Image pull secrets                                                                              | `[]`        |
 
 ### Workload parameters
@@ -213,7 +235,7 @@ Three runnable charts are in [examples](examples): `simple` is the chart above, 
 | `initContainers`                        | Add additional init containers to the APP pods                                                                           | `[]`            |
 | `command`                               | Override default container command                                                                                       | `[]`            |
 | `args`                                  | Override default container args                                                                                          | `[]`            |
-| `envVars`                               | Environment variables to be set on APP container                                                                         | `nil`           |
+| `envVars`                               | Environment variables to be set on APP container                                                                         | `{}`            |
 | `envVarsConfigMap`                      | ConfigMap with environment variables                                                                                     | `""`            |
 | `envVarsSecret`                         | Secret with environment variables                                                                                        | `""`            |
 

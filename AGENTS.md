@@ -20,7 +20,9 @@ charts/helmet/
   examples/simple/      minimal chart, renders Deployment + Service + Ingress
   examples/full/        exercises most features, renders 11 resources
   examples/stateful/    StatefulSet with per-replica storage
-Makefile                deps, lint, readme, readme-check, check
+  values.schema.json    GENERATED from the same annotations
+hack/                   helper scripts used by the Makefile
+Makefile                deps, lint, readme, schema, template, conform, check
 .github/workflows/ci.yaml
 ```
 
@@ -32,6 +34,10 @@ Makefile                deps, lint, readme, readme-check, check
 
 **Every value needs a `@param` and every `@param` needs a value.** The generator errors on either mismatch and the `check` job fails. A `@param` naming a key that does not exist is the most common way this breaks, usually from copy-paste.
 
+**`values.schema.json` is generated too.** `make schema` writes it from the same annotations; `make schema-check` guards it in CI. Never hand-edit it.
+
+**Never default a value to `null`.** Use a typed empty value (`""`, `{}`, `[]`). The generator cannot infer a type from null, and Helm's JSON Schema has no `nullable` keyword, so a null default produces a schema that rejects the chart's own values.
+
 **Bump the chart version in the same commit as the change it describes.** CI publishes on push to `main` based on `Chart.yaml`'s `version`. A bump committed ahead of its fixes ships a version that does not contain them. This already happened once: published `0.15.0` is missing the fixes that its own commit range implies.
 
 **Both workloads share one pod template.** `templates/_pod.yaml` defines `helmet.podTemplate`, included by `helmet.deployment` and `helmet.statefulset`. Never add a container or pod-level field to one workload alone. If you change how storage is mounted, the volume condition in `_pod.yaml` and the `volumeClaimTemplates` condition in `_statefulset.yaml` must stay in step, or the pod mounts a volume nothing defines.
@@ -39,37 +45,34 @@ Makefile                deps, lint, readme, readme-check, check
 ## Commands
 
 ```bash
-make check     # what CI runs: lint plus parameter table verification
+make check     # everything CI runs
 make readme    # regenerate parameter tables after editing @param annotations
-make lint      # helm lint every chart
+make schema    # regenerate values.schema.json after editing @param annotations
+make template  # render every example at every supported Kubernetes version
+make conform   # the above, then validate against real Kubernetes schemas
 make help      # list targets
 ```
 
-Requires `helm`, `yq` and `npx` on PATH.
+Requires `helm`, `yq`, `npx`, `python3` and `kubeconform` on PATH.
 
 ## Making a change
 
 1. Edit templates or `values.yaml`.
-2. If you touched `@param` annotations, run `make readme`.
-3. Run `make check`.
-4. **Render an example.** See below. This is not optional.
-5. Bump `version` and `appVersion` in `Chart.yaml`, plus the other references listed under Releasing.
+2. If you touched `@param` annotations, run `make readme schema`.
+3. Run `make check`, which lints, verifies both generated files, renders every example at every supported Kubernetes version, and validates the output. See the note below on why rendering matters.
+4. Bump `version` and `appVersion` in `Chart.yaml`, plus the other references listed under Releasing.
 
 ### `helm lint` is not enough
 
 Every file in `templates/` is an underscore-prefixed partial, so Helm renders none of them during `helm lint` on the library chart itself. Lint passes on templates that crash the moment a consumer includes them. A broken `helmet.notes` passed lint for the entire life of this repo.
 
-The real test is rendering a chart that consumes helmet:
+The real test is rendering a chart that consumes helmet, which is what `make conform` does: it packages the local chart, drops it into each example, renders every example at every version in `KUBE_VERSIONS`, and validates the output against the real Kubernetes API schemas.
 
 ```bash
-make deps
-helm package charts/helmet --destination /tmp/dist
-rm -rf /tmp/ex && cp -r charts/helmet/examples/full /tmp/ex
-mkdir -p /tmp/ex/charts && cp /tmp/dist/helmet-*.tgz /tmp/ex/charts/
-helm template demo /tmp/ex
+make conform
 ```
 
-`examples/full` should produce 11 resources. Vary `--set` to reach branches the examples do not cover, particularly each `service.type`.
+Run it after any template change. Vary `--set` by hand to reach branches the examples do not cover, particularly each `service.type`.
 
 To test `helmet.notes`, include it from a throwaway chart's ConfigMap and run `helm template`. `helm install --dry-run` cannot render NOTES without a reachable cluster, even with `--dry-run=client`.
 
@@ -77,12 +80,13 @@ To test `helmet.notes`, include it from a throwaway chart's ConfigMap and run `h
 
 Push to `main` publishes any chart whose `Chart.yaml` version is not already in the registry, pushing the OCI artifact and cutting a GitHub release with the `.tgz` attached. Already-published versions are skipped, so unrelated merges are no-ops.
 
-A version bump touches six places. `grep -rn "<old version>" --exclude-dir=.git .` finds them all:
+A version bump touches seven places. `grep -rn "<old version>" --exclude-dir=.git .` finds them all:
 
 - `charts/helmet/Chart.yaml`: `version` and `appVersion`
 - `charts/helmet/README.md`: the dependency snippet
 - `README.md`: the dependency snippet and the `helm pull --version` command
 - `charts/helmet/examples/README.md`: the `file://` snippet
+- `charts/helmet/README.md`: the schema download URL under "Validating your values"
 
 The example charts pin `version: ^0` and need no edit.
 

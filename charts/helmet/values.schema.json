@@ -1,0 +1,937 @@
+{
+    "title": "Chart Values",
+    "type": "object",
+    "properties": {
+        "global": {
+            "type": "object",
+            "properties": {
+                "imageRegistry": {
+                    "type": "string",
+                    "description": "Global Docker image registry",
+                    "default": ""
+                },
+                "imagePullSecrets": {
+                    "type": "array",
+                    "description": "Global Docker registry secret names as an array",
+                    "default": []
+                },
+                "defaultStorageClass": {
+                    "type": "string",
+                    "description": "Global default StorageClass for Persistent Volume(s)",
+                    "default": ""
+                },
+                "compatibility": {
+                    "type": "object",
+                    "properties": {
+                        "openshift": {
+                            "type": "object",
+                            "properties": {
+                                "adaptSecurityContext": {
+                                    "type": "string",
+                                    "description": "Adapt the securityContext sections of the deployment to make them compatible with Openshift restricted-v2 SCC: remove runAsUser, runAsGroup and fsGroup and let the platform use their allowed default IDs. Possible values: auto (apply if the detected running cluster is Openshift), force (perform the adaptation always), disabled (do not perform adaptation)",
+                                    "default": "auto"
+                                }
+                            }
+                        },
+                        "omitEmptySeLinuxOptions": {
+                            "type": "boolean",
+                            "description": "If set to true, removes the seLinuxOptions from the securityContexts when it is set to an empty object",
+                            "default": false
+                        }
+                    }
+                }
+            }
+        },
+        "kubeVersion": {
+            "type": "string",
+            "description": "Force target Kubernetes version (using Helm capabilities if not set)",
+            "default": ""
+        },
+        "nameOverride": {
+            "type": "string",
+            "description": "String to partially override common.names.fullname template with a string (will maintain the release name)",
+            "default": ""
+        },
+        "fullnameOverride": {
+            "type": "string",
+            "description": "String to fully override common.names.fullname template with a string",
+            "default": ""
+        },
+        "namespaceOverride": {
+            "type": "string",
+            "description": "String to fully override common.names.namespace template with a string",
+            "default": ""
+        },
+        "clusterDomain": {
+            "type": "string",
+            "description": "Kubernetes Cluster Domain name",
+            "default": "cluster.local"
+        },
+        "annotations": {
+            "type": "object",
+            "description": "Additional annotations to be added to the App Deployment. Evaluated as a template",
+            "default": {}
+        },
+        "labels": {
+            "type": "object",
+            "description": "Additional labels to be added to the App Deployment. Evaluated as a template",
+            "default": {}
+        },
+        "commonLabels": {
+            "type": "object",
+            "description": "Labels to be added to all deployed resources",
+            "default": {}
+        },
+        "commonAnnotations": {
+            "type": "object",
+            "description": "Annotations to be added to all deployed resources",
+            "default": {}
+        },
+        "image": {
+            "type": "object",
+            "properties": {
+                "registry": {
+                    "type": "string",
+                    "description": "Image registry",
+                    "default": "docker.io"
+                },
+                "repository": {
+                    "type": "string",
+                    "description": "Image repository",
+                    "default": ""
+                },
+                "tag": {
+                    "type": "string",
+                    "description": "Image tag (immutable tags are recommended)",
+                    "default": "latest"
+                },
+                "digest": {
+                    "type": "string",
+                    "description": "Image digest in the way sha256:aa.... Please note this parameter, if set, will override the tag",
+                    "default": ""
+                },
+                "pullPolicy": {
+                    "type": "string",
+                    "description": "Image pull policy",
+                    "default": ""
+                },
+                "pullSecrets": {
+                    "type": "array",
+                    "description": "Image pull secrets",
+                    "default": []
+                }
+            }
+        },
+        "workload": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "description": "Workload to render for the application. Allowed values: `Deployment` or `StatefulSet`",
+                    "default": "Deployment"
+                },
+                "podManagementPolicy": {
+                    "type": "string",
+                    "description": "Pod creation and scaling order. StatefulSet only. Allowed values: `OrderedReady` or `Parallel`",
+                    "default": "OrderedReady"
+                },
+                "serviceName": {
+                    "type": "string",
+                    "description": "Existing headless Service governing the StatefulSet. When empty, helmet creates one named `<fullname>-headless`",
+                    "default": ""
+                }
+            }
+        },
+        "replicaCount": {
+            "type": "number",
+            "description": "Number of APP replicas",
+            "default": 1
+        },
+        "revisionHistoryLimit": {
+            "type": "number",
+            "description": "The number of old history to retain to allow rollback",
+            "default": 10
+        },
+        "ports": {
+            "type": "array",
+            "description": "List of ports to expose from the container. Each entry takes name, containerPort and protocol",
+            "default": "[]",
+            "items": {
+                "type": "object"
+            }
+        },
+        "livenessProbe": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable livenessProbe on the main container. Define the probe itself alongside this key",
+                    "default": false
+                }
+            }
+        },
+        "readinessProbe": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable readinessProbe on the main container. Define the probe itself alongside this key",
+                    "default": false
+                }
+            }
+        },
+        "startupProbe": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable startupProbe on the main container. Define the probe itself alongside this key",
+                    "default": false
+                }
+            }
+        },
+        "podRestartPolicy": {
+            "type": "string",
+            "description": "Restart policy for all containers within the pod",
+            "default": "Always"
+        },
+        "podSecurityContext": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enabled APP pods' Security Context",
+                    "default": false
+                },
+                "fsGroup": {
+                    "type": "number",
+                    "description": "Set APP pod's Security Context fsGroup",
+                    "default": 0
+                }
+            }
+        },
+        "containerSecurityContext": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enabled APP containers' Security Context",
+                    "default": false
+                },
+                "runAsUser": {
+                    "type": "number",
+                    "description": "Set APP containers' Security Context runAsUser",
+                    "default": 1001
+                },
+                "runAsNonRoot": {
+                    "type": "boolean",
+                    "description": "Set APP container's Security Context runAsNonRoot",
+                    "default": true
+                }
+            }
+        },
+        "lifecycleHooks": {
+            "type": "object",
+            "description": "LifecycleHook to set additional configuration at startup Evaluated as a template",
+            "default": {}
+        },
+        "resources": {
+            "type": "object",
+            "properties": {
+                "limits": {
+                    "type": "object",
+                    "description": "The resources limits for the container",
+                    "default": {}
+                },
+                "requests": {
+                    "type": "object",
+                    "description": "The requested resources for the container",
+                    "default": {}
+                }
+            }
+        },
+        "hostAliases": {
+            "type": "array",
+            "description": "Add deployment host aliases",
+            "default": []
+        },
+        "podLabels": {
+            "type": "object",
+            "description": "Additional pod labels",
+            "default": {}
+        },
+        "podAnnotations": {
+            "type": "object",
+            "description": "Additional pod annotations",
+            "default": {}
+        },
+        "podAffinityPreset": {
+            "type": "string",
+            "description": "Pod affinity preset. Allowed values: soft, hard",
+            "default": ""
+        },
+        "podAntiAffinityPreset": {
+            "type": "string",
+            "description": "Pod anti-affinity preset. Ignored if `affinity` is set. Allowed values: `soft` or `hard`",
+            "default": "soft"
+        },
+        "nodeAffinityPreset": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "Node affinity preset type. Ignored if `affinity` is set. Allowed values: `soft` or `hard`",
+                    "default": ""
+                },
+                "key": {
+                    "type": "string",
+                    "description": "Node label key to match Ignored if `affinity` is set.",
+                    "default": ""
+                },
+                "values": {
+                    "type": "array",
+                    "description": "Node label values to match. Ignored if `affinity` is set.",
+                    "default": []
+                }
+            }
+        },
+        "affinity": {
+            "type": "object",
+            "description": "Affinity for pod assignment",
+            "default": {}
+        },
+        "nodeSelector": {
+            "type": "object",
+            "description": "Node labels for pod assignment.",
+            "default": {}
+        },
+        "tolerations": {
+            "type": "array",
+            "description": "Tolerations for pod assignment.",
+            "default": []
+        },
+        "topologySpreadConstraints": {
+            "type": "array",
+            "description": "Topology Spread Constraints for pod assignment spread across your cluster among failure-domains. Evaluated as a template",
+            "default": []
+        },
+        "priorityClassName": {
+            "type": "string",
+            "description": "Priority Class Name",
+            "default": ""
+        },
+        "schedulerName": {
+            "type": "string",
+            "description": "Use an alternate scheduler, e.g. \"stork\".",
+            "default": ""
+        },
+        "terminationGracePeriodSeconds": {
+            "type": "string",
+            "description": "Seconds APP pod needs to terminate gracefully",
+            "default": ""
+        },
+        "updateStrategy": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "APP update strategy type. Add `rollingUpdate` alongside it to tune the rollout",
+                    "default": "RollingUpdate"
+                }
+            }
+        },
+        "extraVolumes": {
+            "type": "array",
+            "description": "Array to add extra volumes (evaluated as a template)",
+            "default": []
+        },
+        "extraVolumeMounts": {
+            "type": "array",
+            "description": "Array to add extra mounts (normally used with extraVolumes, evaluated as a template)",
+            "default": []
+        },
+        "sidecars": {
+            "type": "array",
+            "description": "Add additional sidecar containers to the APP pods",
+            "default": []
+        },
+        "initContainers": {
+            "type": "array",
+            "description": "Add additional init containers to the APP pods",
+            "default": []
+        },
+        "command": {
+            "type": "array",
+            "description": "Override default container command",
+            "default": []
+        },
+        "args": {
+            "type": "array",
+            "description": "Override default container args",
+            "default": []
+        },
+        "envVars": {
+            "type": "object",
+            "description": "Environment variables to be set on APP container",
+            "default": {}
+        },
+        "envVarsConfigMap": {
+            "type": "string",
+            "description": "ConfigMap with environment variables",
+            "default": ""
+        },
+        "envVarsSecret": {
+            "type": "string",
+            "description": "Secret with environment variables",
+            "default": ""
+        },
+        "autoscaling": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Deploy a HorizontalPodAutoscaler object for the APP deployment",
+                    "default": false
+                },
+                "minReplicas": {
+                    "type": "number",
+                    "description": "Minimum number of replicas to scale back",
+                    "default": 3
+                },
+                "maxReplicas": {
+                    "type": "number",
+                    "description": "Maximum number of replicas to scale out",
+                    "default": 5
+                },
+                "targetCPU": {
+                    "type": "number",
+                    "description": "Define the CPU target to trigger the scaling actions (utilization percentage)",
+                    "default": 80
+                },
+                "targetMemory": {
+                    "type": "number",
+                    "description": "Define the memory target to trigger the scaling actions (utilization percentage)",
+                    "default": 80
+                },
+                "metrics": {
+                    "type": "array",
+                    "description": "Metrics to use when deciding to scale the deployment (evaluated as a template)",
+                    "default": "[]"
+                }
+            }
+        },
+        "configMap": {
+            "type": "object",
+            "properties": {
+                "mounted": {
+                    "type": "boolean",
+                    "description": "Mount the ConfigMap as a volume in the main container",
+                    "default": false
+                },
+                "mountPath": {
+                    "type": "string",
+                    "description": "Path to mount the ConfigMap at. Only used when `configMap.mounted` is true",
+                    "default": "/app/config"
+                },
+                "subPath": {
+                    "type": "string",
+                    "description": "Key of the ConfigMap to mount as a single file instead of the whole volume",
+                    "default": ""
+                },
+                "data": {
+                    "type": "object",
+                    "description": "Store data in key-value pairs",
+                    "default": {}
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Additional custom annotations for the ConfigMap",
+                    "default": {}
+                },
+                "labels": {
+                    "type": "object",
+                    "description": "Additional custom labels for the ConfigMap",
+                    "default": {}
+                }
+            }
+        },
+        "secret": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "the type is used to facilitate programmatic handling of the Secret data",
+                    "default": "Opaque"
+                },
+                "data": {
+                    "type": "object",
+                    "description": "store data in key-value pairs",
+                    "default": {}
+                },
+                "stringData": {
+                    "type": "object",
+                    "description": "store data in key-value pairs",
+                    "default": {}
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Additional custom annotations for the Secret",
+                    "default": {}
+                },
+                "labels": {
+                    "type": "object",
+                    "description": "Additional custom labels for the Secret",
+                    "default": {}
+                }
+            }
+        },
+        "ingress": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable ingress resource for the APP",
+                    "default": false
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Path for the default host",
+                    "default": "/"
+                },
+                "apiVersion": {
+                    "type": "string",
+                    "description": "Override API Version (automatically detected if not set)",
+                    "default": ""
+                },
+                "pathType": {
+                    "type": "string",
+                    "description": "Ingress path type",
+                    "default": "ImplementationSpecific"
+                },
+                "hostname": {
+                    "type": "string",
+                    "description": "Default host for the ingress resource, a host pointing to this will be created",
+                    "default": "app.local"
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Additional annotations for the Ingress resource. To enable certificate autogeneration, place here your cert-manager annotations.",
+                    "default": {}
+                },
+                "ingressClassName": {
+                    "type": "string",
+                    "description": "Set the ingerssClassName on the ingress record for k8s 1.18+",
+                    "default": ""
+                },
+                "tls": {
+                    "type": "boolean",
+                    "description": "Enable TLS configuration for the hostname defined at ingress.hostname parameter",
+                    "default": false
+                },
+                "extraHosts": {
+                    "type": "array",
+                    "description": "An array with additional hostname(s) to be covered with the ingress record",
+                    "default": []
+                },
+                "extraPaths": {
+                    "type": "array",
+                    "description": "Any additional arbitrary paths that may need to be added to the ingress under the main host.",
+                    "default": []
+                },
+                "selfSigned": {
+                    "type": "boolean",
+                    "description": "Create a TLS secret for this ingress record using self-signed certificates generated by Helm",
+                    "default": false
+                },
+                "extraTls": {
+                    "type": "array",
+                    "description": "TLS configuration for additional hostname(s) to be covered with this ingress record",
+                    "default": []
+                },
+                "secrets": {
+                    "type": "array",
+                    "description": "If you're providing your own certificates, please use this to add the certificates as secrets",
+                    "default": []
+                },
+                "existingSecret": {
+                    "type": "string",
+                    "description": "It is you own the certificate as secret.",
+                    "default": ""
+                },
+                "extraRules": {
+                    "type": "array",
+                    "description": "Additional rules to be covered with this ingress record",
+                    "default": []
+                }
+            }
+        },
+        "persistence": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Enable persistence using Persistent Volume Claims",
+                    "default": false
+                },
+                "mountPath": {
+                    "type": "string",
+                    "description": "Path to mount the volume at.",
+                    "default": "/data"
+                },
+                "subPath": {
+                    "type": "string",
+                    "description": "The subdirectory of the volume to mount to, useful in dev environments and one PV for multiple services",
+                    "default": ""
+                },
+                "storageClass": {
+                    "type": "string",
+                    "description": "Storage class of backing PVC",
+                    "default": ""
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Persistent Volume Claim annotations",
+                    "default": {}
+                },
+                "accessModes": {
+                    "type": "array",
+                    "description": "Persistent Volume Access Modes",
+                    "default": [
+                        "ReadWriteOnce"
+                    ],
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "size": {
+                    "type": "string",
+                    "description": "Size of data volume",
+                    "default": "8Gi"
+                },
+                "existingClaim": {
+                    "type": "string",
+                    "description": "The name of an existing PVC to use for persistence",
+                    "default": ""
+                },
+                "selector": {
+                    "type": "object",
+                    "description": "Selector to match an existing Persistent Volume for WordPress data PVC",
+                    "default": {}
+                },
+                "dataSource": {
+                    "type": "object",
+                    "description": "Custom PVC data source",
+                    "default": {}
+                }
+            }
+        },
+        "service": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "APP service type",
+                    "default": "ClusterIP"
+                },
+                "ports": {
+                    "type": "array",
+                    "description": "APP service ports. Each entry takes name, protocol, port and targetPort",
+                    "default": "[]",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "sessionAffinity": {
+                    "type": "string",
+                    "description": "Control where client requests go, to the same pod or round-robin",
+                    "default": "None"
+                },
+                "sessionAffinityConfig": {
+                    "type": "object",
+                    "description": "Additional settings for the sessionAffinity (evaluated as a template)",
+                    "default": {}
+                },
+                "clusterIP": {
+                    "type": "string",
+                    "description": "APP service Cluster IP",
+                    "default": ""
+                },
+                "loadBalancerIP": {
+                    "type": "string",
+                    "description": "APP service Load Balancer IP",
+                    "default": ""
+                },
+                "loadBalancerSourceRanges": {
+                    "type": "array",
+                    "description": "APP service Load Balancer sources",
+                    "default": []
+                },
+                "externalTrafficPolicy": {
+                    "type": "string",
+                    "description": "APP service external traffic policy",
+                    "default": "Cluster"
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Additional custom annotations for APP service",
+                    "default": {}
+                }
+            }
+        },
+        "serviceMonitor": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Specify if a ServiceMonitor will be deployed for Prometheus Operator",
+                    "default": false
+                },
+                "namespace": {
+                    "type": "string",
+                    "description": "Namespace in which Prometheus is running",
+                    "default": ""
+                },
+                "labels": {
+                    "type": "object",
+                    "description": "Additional ServiceMonitor labels (evaluated as a template)",
+                    "default": {}
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Additional ServiceMonitor annotations (evaluated as a template)",
+                    "default": {}
+                },
+                "jobLabel": {
+                    "type": "string",
+                    "description": "The name of the label on the target service to use as the job name in Prometheus",
+                    "default": ""
+                },
+                "honorLabels": {
+                    "type": "boolean",
+                    "description": "honorLabels chooses the metric's labels on collisions with target labels",
+                    "default": false
+                },
+                "interval": {
+                    "type": "string",
+                    "description": "How frequently to scrape metrics",
+                    "default": ""
+                },
+                "scrapeTimeout": {
+                    "type": "string",
+                    "description": "Timeout after which the scrape is ended",
+                    "default": ""
+                },
+                "metricRelabelings": {
+                    "type": "array",
+                    "description": "Specify additional relabeling of metrics",
+                    "default": "[]"
+                },
+                "relabelings": {
+                    "type": "array",
+                    "description": "Specify general relabeling",
+                    "default": "[]"
+                },
+                "selector": {
+                    "type": "object",
+                    "description": "Prometheus instance selector labels",
+                    "default": {}
+                },
+                "namespaceSelector": {
+                    "type": "object",
+                    "description": "is a selector for selecting either all namespaces or a list of namespaces.",
+                    "default": {}
+                },
+                "port": {
+                    "type": "string",
+                    "description": "port used by serviceMonitor",
+                    "default": "http"
+                },
+                "path": {
+                    "type": "string",
+                    "description": "path used by serviceMonitor",
+                    "default": "/metrics"
+                }
+            }
+        },
+        "podMonitor": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Specify if a PodMonitor will be deployed for Prometheus Operator",
+                    "default": false
+                },
+                "namespace": {
+                    "type": "string",
+                    "description": "Namespace in which Prometheus is running",
+                    "default": ""
+                },
+                "jobLabel": {
+                    "type": "string",
+                    "description": "The name of the label on the target pod to use as the job name in Prometheus",
+                    "default": ""
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Additional PodMonitor annotations (evaluated as a template)",
+                    "default": {}
+                },
+                "honorLabels": {
+                    "type": "boolean",
+                    "description": "honorLabels chooses the metric's labels on collisions with target labels",
+                    "default": false
+                },
+                "port": {
+                    "type": "string",
+                    "description": "The port where metrics should be scraped",
+                    "default": "http"
+                },
+                "path": {
+                    "type": "string",
+                    "description": "The path where metrics are exposed.",
+                    "default": "/metrics"
+                },
+                "interval": {
+                    "type": "string",
+                    "description": "Scrape interval. Prometheus default used if not set.",
+                    "default": "30s"
+                },
+                "scrapeTimeout": {
+                    "type": "string",
+                    "description": "The timeout duration after which the scrape is ended.",
+                    "default": "10s"
+                },
+                "labels": {
+                    "type": "object",
+                    "description": "Additional PodMonitor labels (evaluated as a template)",
+                    "default": {}
+                },
+                "relabelings": {
+                    "type": "array",
+                    "description": "Specify general relabeling",
+                    "default": "[]"
+                },
+                "metricRelabelings": {
+                    "type": "array",
+                    "description": "Specify additional relabeling of metrics",
+                    "default": "[]"
+                },
+                "namespaceSelector": {
+                    "type": "object",
+                    "description": "is a selector for selecting either all namespaces or a list of namespaces.",
+                    "default": {}
+                },
+                "selector": {
+                    "type": "object",
+                    "description": "is a selector to select which pods will be monitored.",
+                    "default": {}
+                }
+            }
+        },
+        "serviceAccount": {
+            "type": "object",
+            "properties": {
+                "create": {
+                    "type": "boolean",
+                    "description": "Enable creation of ServiceAccount for APP pods",
+                    "default": false
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The name of the ServiceAccount to use.",
+                    "default": ""
+                },
+                "automountServiceAccountToken": {
+                    "type": "boolean",
+                    "description": "Allows auto mount of ServiceAccountToken on the serviceAccount created",
+                    "default": true
+                },
+                "annotations": {
+                    "type": "object",
+                    "description": "Additional custom annotations for the ServiceAccount",
+                    "default": {}
+                },
+                "labels": {
+                    "type": "object",
+                    "description": "Additional custom labels for the ServiceAccount",
+                    "default": {}
+                }
+            }
+        },
+        "cronjob": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "description": "Deploy a CronJob alongside the application",
+                    "default": false
+                },
+                "concurrencyPolicy": {
+                    "type": "string",
+                    "description": "Allow/Forbid/Replace concurrency",
+                    "default": "Allow"
+                },
+                "schedule": {
+                    "type": "string",
+                    "description": "run schedule for the cronjob",
+                    "default": ""
+                },
+                "successfulJobsHistoryLimit": {
+                    "type": "number",
+                    "description": "Number of successful finished jobs to retain",
+                    "default": 3
+                },
+                "podAnnotations": {
+                    "type": "object",
+                    "description": "Additional annotations for the CronJob pods (evaluated as a template)",
+                    "default": {}
+                },
+                "nodeSelector": {
+                    "type": "object",
+                    "description": "Node labels for CronJob pod assignment. Falls back to the top-level `nodeSelector` when empty",
+                    "default": {}
+                },
+                "tolerations": {
+                    "type": "array",
+                    "description": "Tolerations for CronJob pod assignment. Falls back to the top-level `tolerations` when empty",
+                    "default": []
+                },
+                "restartPolicy": {
+                    "type": "string",
+                    "description": "Restart policy for the CronJob pod",
+                    "default": "OnFailure"
+                },
+                "podSecurityContext": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean",
+                            "description": "Enable the CronJob pods' Security Context",
+                            "default": false
+                        },
+                        "fsGroup": {
+                            "type": "number",
+                            "description": "Set the CronJob pod's Security Context fsGroup",
+                            "default": 0
+                        }
+                    }
+                },
+                "initContainers": {
+                    "type": "array",
+                    "description": "Add init containers to the CronJob pods",
+                    "default": []
+                },
+                "containers": {
+                    "type": "array",
+                    "description": "Add containers to the CronJob pods. This is where the scheduled workload itself is defined",
+                    "default": []
+                },
+                "volumes": {
+                    "type": "array",
+                    "description": "Array to add volumes to the CronJob pods (evaluated as a template)",
+                    "default": []
+                }
+            }
+        }
+    }
+}
