@@ -1,0 +1,8 @@
+# Baseline for the suites. Individual tests override what they care about.
+image:
+  repository: nginx
+
+ports:
+  - name: http
+    containerPort: 8080
+    protocol: TCP

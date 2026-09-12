@@ -1,0 +1,54 @@
+suite: install notes
+templates:
+  - NOTES.txt
+tests:
+  # helmet.notes is not part of helmet.app, so rendering the examples never
+  # touches it. Its LoadBalancer branch was broken for the life of the repo
+  # because nothing executed it. These cover every branch.
+  - it: points at the ingress host when an ingress exists
+    set:
+      ingress.enabled: true
+      ingress.hostname: shop.example.com
+    asserts:
+      - matchRegexRaw:
+          pattern: 'http://shop\.example\.com/'
+
+  - it: gives the node port recipe for a NodePort service
+    set:
+      service.type: NodePort
+    asserts:
+      - matchRegexRaw:
+          pattern: 'jsonpath=\"\{\.spec\.ports\[0\]\.nodePort\}\"'
+
+  - it: gives the load balancer recipe for a LoadBalancer service
+    set:
+      service.type: LoadBalancer
+    asserts:
+      - matchRegexRaw:
+          pattern: 'URL: http://\$SERVICE_IP/'
+
+  - it: includes the port when the load balancer is not on 80
+    set:
+      service.type: LoadBalancer
+      service.ports:
+        - name: https
+          protocol: TCP
+          port: 8443
+          targetPort: http
+    asserts:
+      - matchRegexRaw:
+          pattern: 'URL: http://\$SERVICE_IP:8443/'
+
+  - it: gives the in-cluster address and a port-forward for a ClusterIP service
+    set:
+      service.type: ClusterIP
+    asserts:
+      - matchRegexRaw:
+          pattern: 'RELEASE-NAME-consumer\.NAMESPACE\.svc\.cluster\.local:80'
+      - matchRegexRaw:
+          pattern: 'port-forward \$POD_NAME 8080:\$CONTAINER_PORT'
+
+  - it: reports the chart it came from
+    asserts:
+      - matchRegexRaw:
+          pattern: 'CHART NAME: consumer'

@@ -13,6 +13,7 @@ env:
   OCI_REPOSITORY: charts
   README_GENERATOR_VERSION: 2.7.2
   KUBECONFORM_VERSION: v0.8.0
+  UNITTEST_VERSION: v1.1.2
 
 jobs:
   check:
@@ -36,6 +37,9 @@ jobs:
             | sudo tar -xz -C /usr/local/bin kubeconform
           kubeconform -v
 
+      - name: Install helm-unittest
+        run: helm plugin install https://github.com/helm-unittest/helm-unittest --version "${UNITTEST_VERSION}"
+
       - name: Helm lint
         run: make lint
 
@@ -47,6 +51,11 @@ jobs:
 
       - name: Check values schemas are in sync
         run: make schema-check
+
+      # Asserts on what the templates actually produce, through a consumer
+      # chart, since a library chart renders nothing on its own.
+      - name: Unit tests
+        run: make unittest
 
       # Every template in charts/*/templates is an unrendered partial, so lint
       # alone proves nothing. This packages the local chart, renders each

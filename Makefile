@@ -4,6 +4,8 @@ EXAMPLES := $(sort $(dir $(wildcard charts/*/examples/*/Chart.yaml)))
 README_GENERATOR_VERSION := 2.7.2
 GENERATOR := npx --yes @bitnami/readme-generator-for-helm@$(README_GENERATOR_VERSION)
 KUBECONFORM_VERSION := v0.8.0
+UNITTEST_VERSION := v1.1.2
+FIXTURE := tests/consumer
 
 # Oldest supported, plus the current stable minors. The chart picks apiVersions
 # through common.capabilities.*, so each of these can render differently.
@@ -13,7 +15,7 @@ BUILD := build
 SCHEMA_REGISTRY := https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master
 CRD_REGISTRY := https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
 
-.PHONY: help deps lint readme readme-check schema schema-check package template conform check clean
+.PHONY: help deps lint readme readme-check schema schema-check package unittest template conform check clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -72,6 +74,16 @@ package: deps ## Package every chart into build/
 	@mkdir -p $(BUILD)
 	@for chart in $(CHARTS); do helm package charts/$$chart --destination $(BUILD) >/dev/null; done
 
+# helmet is a library chart, so it renders nothing on its own. The suites run
+# against tests/consumer, a real application chart that includes helmet.app and
+# helmet.notes, with the freshly packaged chart dropped in as its dependency.
+unittest: package ## Run the helm-unittest suites
+	@helm plugin list | grep -q unittest || { \
+		echo "helm-unittest not installed. Run: helm plugin install https://github.com/helm-unittest/helm-unittest --version $(UNITTEST_VERSION)"; exit 1; }
+	@mkdir -p $(FIXTURE)/charts && rm -f $(FIXTURE)/charts/*.tgz
+	@cp $(BUILD)/helmet-*.tgz $(FIXTURE)/charts/
+	@helm unittest $(FIXTURE)
+
 # Renders each example against the LOCAL chart rather than the published one, by
 # dropping the freshly packaged .tgz into the example's charts/ directory. Every
 # template in charts/*/templates is an unrendered partial, so `helm lint` alone
@@ -106,8 +118,8 @@ conform: template ## Validate rendered manifests against Kubernetes schemas
 			|| { echo "FAILED validation at Kubernetes $$kube"; exit 1; }; \
 	done
 
-check: lint readme-check schema-check conform ## Run everything CI runs
+check: lint readme-check schema-check unittest conform ## Run everything CI runs
 
 clean: ## Remove build output and vendored dependencies
-	@rm -rf $(BUILD)
+	@rm -rf $(BUILD) $(FIXTURE)/charts
 	@for chart in $(CHARTS); do rm -rf charts/$$chart/charts; done

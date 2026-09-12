@@ -1,0 +1,133 @@
+suite: workload selection
+templates:
+  - app.yaml
+tests:
+  # documentSelector fails the test when nothing matches, so selecting a kind is
+  # itself the existence assertion. hasDocuments pins the total, which is what
+  # proves the other workload was not also rendered.
+  - it: renders a Deployment by default
+    asserts:
+      - hasDocuments:
+          count: 2 # Deployment and Service, no StatefulSet
+  - it: that default workload is a Deployment
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - isAPIVersion:
+          of: apps/v1
+
+  - it: renders no workload without an image repository
+    set:
+      image.repository: ""
+    asserts:
+      - hasDocuments:
+          count: 1 # the Service only
+
+  - it: swaps the Deployment for a StatefulSet
+    set:
+      workload.kind: StatefulSet
+    asserts:
+      - hasDocuments:
+          count: 3 # StatefulSet, Service, headless Service
+  - it: and that workload really is a StatefulSet
+    set:
+      workload.kind: StatefulSet
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - isAPIVersion:
+          of: apps/v1
+
+  - it: governs the StatefulSet with a headless Service
+    set:
+      workload.kind: StatefulSet
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.serviceName
+          value: RELEASE-NAME-consumer-headless
+
+  - it: creates that headless Service
+    set:
+      workload.kind: StatefulSet
+    documentSelector:
+      path: metadata.name
+      value: RELEASE-NAME-consumer-headless
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.clusterIP
+          value: None
+      - equal:
+          path: spec.publishNotReadyAddresses
+          value: true
+
+  - it: defers to an existing governing Service
+    set:
+      workload.kind: StatefulSet
+      workload.serviceName: my-own-service
+    asserts:
+      - hasDocuments:
+          count: 2 # no headless Service of our own
+  - it: and points the StatefulSet at it
+    set:
+      workload.kind: StatefulSet
+      workload.serviceName: my-own-service
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.serviceName
+          value: my-own-service
+
+  - it: honours podManagementPolicy
+    set:
+      workload.kind: StatefulSet
+      workload.podManagementPolicy: Parallel
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.podManagementPolicy
+          value: Parallel
+
+  - it: uses strategy on a Deployment, not updateStrategy
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: RollingUpdate
+      - notExists:
+          path: spec.updateStrategy
+
+  - it: uses updateStrategy on a StatefulSet, not strategy
+    set:
+      workload.kind: StatefulSet
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.updateStrategy.type
+          value: RollingUpdate
+      - notExists:
+          path: spec.strategy
+
+  - it: drops replicas when autoscaling takes over
+    set:
+      autoscaling.enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.replicas

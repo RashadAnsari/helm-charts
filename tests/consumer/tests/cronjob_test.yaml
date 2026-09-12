@@ -1,0 +1,123 @@
+suite: cronjob
+templates:
+  - app.yaml
+set:
+  cronjob.enabled: true
+  cronjob.schedule: "*/5 * * * *"
+  cronjob.containers:
+    - name: job
+      image: alpine:3.22
+tests:
+  # Three of these values were declared but ignored: restartPolicy was
+  # hardcoded, podSecurityContext read the top-level one, and nodeSelector and
+  # tolerations only applied when the top-level value was also set.
+  - it: honours the schedule and concurrency policy
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "*/5 * * * *"
+      - equal:
+          path: spec.concurrencyPolicy
+          value: Allow
+
+  - it: honours cronjob.restartPolicy
+    set:
+      cronjob.restartPolicy: Never
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.restartPolicy
+          value: Never
+
+  - it: uses its own security context, not the workload's
+    set:
+      podSecurityContext.enabled: true
+      podSecurityContext.fsGroup: 2000
+      cronjob.podSecurityContext.enabled: true
+      cronjob.podSecurityContext.fsGroup: 9999
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.securityContext.fsGroup
+          value: 9999
+
+  - it: leaves the workload's security context alone
+    set:
+      podSecurityContext.enabled: true
+      podSecurityContext.fsGroup: 2000
+      cronjob.podSecurityContext.enabled: true
+      cronjob.podSecurityContext.fsGroup: 9999
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 2000
+
+  - it: omits the security context when only the workload enables one
+    set:
+      podSecurityContext.enabled: true
+      podSecurityContext.fsGroup: 2000
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - notExists:
+          path: spec.jobTemplate.spec.template.spec.securityContext
+
+  - it: inherits the top-level nodeSelector when it sets none of its own
+    set:
+      nodeSelector:
+        tier: general
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.nodeSelector.tier
+          value: general
+
+  - it: prefers its own nodeSelector over the top-level one
+    set:
+      nodeSelector:
+        tier: general
+      cronjob.nodeSelector:
+        tier: batch
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.nodeSelector.tier
+          value: batch
+
+  - it: prefers its own tolerations over the top-level ones
+    set:
+      tolerations:
+        - key: general
+          operator: Exists
+      cronjob.tolerations:
+        - key: batch
+          operator: Exists
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.tolerations[0].key
+          value: batch
+
+  - it: is absent unless enabled
+    set:
+      cronjob.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 2 # Deployment and Service only

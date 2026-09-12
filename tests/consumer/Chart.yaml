@@ -1,0 +1,13 @@
+apiVersion: v2
+name: consumer
+description: Test fixture exercising helmet's templates. Not published.
+type: application
+version: "0.1.0"
+appVersion: "0.1.0"
+
+dependencies:
+  - name: helmet
+    version: ">=0.0.0"
+    repository: oci://ghcr.io/rashadansari/charts
+    import-values:
+      - defaults

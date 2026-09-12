@@ -1,0 +1,85 @@
+suite: persistence
+templates:
+  - app.yaml
+set:
+  persistence.enabled: true
+  persistence.mountPath: /data
+  persistence.size: 5Gi
+tests:
+  # The volume condition in _pod.yaml and the volumeClaimTemplates condition in
+  # _statefulset.yaml have to agree. When they drifted, the pod mounted a volume
+  # nothing defined. These four cases cover every combination.
+  - it: a Deployment gets one shared PVC and a plain pod volume
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[?(@.name=='data')].persistentVolumeClaim.claimName
+          value: RELEASE-NAME-consumer
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[?(@.name=='data')].mountPath
+          value: /data
+  - it: and that PVC is a separate document
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: 5Gi
+
+  - it: a StatefulSet gets volumeClaimTemplates instead
+    set:
+      workload.kind: StatefulSet
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: data
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 5Gi
+      # the claim template provides the volume, so the pod must not declare one
+      - notExists:
+          path: spec.template.spec.volumes[?(@.name=='data')]
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[?(@.name=='data')].mountPath
+          value: /data
+  - it: and no standalone PVC is emitted for it
+    set:
+      workload.kind: StatefulSet
+    asserts:
+      - hasDocuments:
+          count: 3 # StatefulSet, Service, headless Service. No PVC.
+
+  - it: an existingClaim on a StatefulSet stays a plain pod volume
+    set:
+      workload.kind: StatefulSet
+      persistence.existingClaim: borrowed
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - equal:
+          path: spec.template.spec.volumes[?(@.name=='data')].persistentVolumeClaim.claimName
+          value: borrowed
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[?(@.name=='data')].mountPath
+          value: /data
+
+  - it: no persistence means no volume and no mount
+    set:
+      persistence.enabled: false
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.template.spec.volumes
+      - notExists:
+          path: spec.template.spec.containers[0].volumeMounts

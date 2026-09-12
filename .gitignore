@@ -1,4 +1,5 @@
+build
 charts/**/charts
 charts/**/examples/**/charts
 charts/**/examples/**/charts/**/charts
-build
+tests/consumer/charts

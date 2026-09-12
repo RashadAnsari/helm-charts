@@ -22,6 +22,8 @@ charts/helmet/
   examples/stateful/    StatefulSet with per-replica storage
   values.schema.json    GENERATED from the same annotations
 hack/                   helper scripts used by the Makefile
+tests/consumer/         helm-unittest fixture: a real chart that includes helmet
+  tests/*_test.yaml     the suites
 Makefile                deps, lint, readme, schema, template, conform, check
 .github/workflows/ci.yaml
 ```
@@ -48,12 +50,18 @@ Makefile                deps, lint, readme, schema, template, conform, check
 make check     # everything CI runs
 make readme    # regenerate parameter tables after editing @param annotations
 make schema    # regenerate values.schema.json after editing @param annotations
+make unittest  # assert on what the templates produce
 make template  # render every example at every supported Kubernetes version
 make conform   # the above, then validate against real Kubernetes schemas
 make help      # list targets
 ```
 
-Requires `helm`, `yq`, `npx`, `python3` and `kubeconform` on PATH.
+Requires `helm`, `yq`, `npx`, `python3` and `kubeconform` on PATH, plus the
+helm-unittest plugin:
+
+```bash
+helm plugin install https://github.com/helm-unittest/helm-unittest --version v1.1.2
+```
 
 ## Making a change
 
@@ -72,9 +80,17 @@ The real test is rendering a chart that consumes helmet, which is what `make con
 make conform
 ```
 
-Run it after any template change. Vary `--set` by hand to reach branches the examples do not cover, particularly each `service.type`.
+Run it after any template change.
 
-To test `helmet.notes`, include it from a throwaway chart's ConfigMap and run `helm template`. `helm install --dry-run` cannot render NOTES without a reachable cluster, even with `--dry-run=client`.
+### Add a test for anything you fix
+
+`make conform` proves the manifests render and are valid. It does not prove they are *right*. The suites in `tests/consumer/tests/` do that, and every bug this chart has had is pinned by one: the crashing `helmet.notes` LoadBalancer branch, the StatefulSet volume that nothing defined, and the three cronjob values that were declared but ignored.
+
+The fixture is a real application chart because a library chart renders nothing on its own. It includes both `helmet.app` and `helmet.notes`, so NOTES gets covered too; nothing else in the repo exercises that template.
+
+When you fix a template, add the assertion first and confirm it fails, then fix. Reintroducing each old bug and watching the matching test fail is how these were checked.
+
+Two helm-unittest details that cost time: `containsDocument` asserts against *every* document rather than any one, so use `documentSelector` for existence and `hasDocuments` for absence. And `set:` does not honour `key[0].field` indexing the way `helm --set` does, producing nils; set the whole array instead.
 
 ## Releasing
 
