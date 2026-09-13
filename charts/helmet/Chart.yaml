@@ -4,9 +4,10 @@ description: Helmet is a library Helm Chart for grouping common logics. This cha
 home: https://github.com/RashadAnsari/helm-charts/blob/main/charts/helmet
 sources:
   - https://github.com/RashadAnsari/helm-charts
+icon: https://raw.githubusercontent.com/RashadAnsari/helm-charts/main/charts/helmet/icon.svg
 type: library
-version: "0.20.0"
-appVersion: "0.20.0"
+version: "0.20.1"
+appVersion: "0.20.1"
 keywords:
   - common
   - helper

@@ -71,8 +71,8 @@ To include only part of the set, call the individual templates instead of `helme
 Helm applies a chart's schema to that chart's own values. Helmet keeps its values under `exports.defaults`, so the schema does nothing while it sits here. To get validation, drop it into your application chart, next to your `values.yaml`:
 
 ```shell
-$ curl -sfLO https://github.com/RashadAnsari/helm-charts/releases/download/helmet-0.20.0/helmet-0.20.0-values.schema.json
-$ mv helmet-0.20.0-values.schema.json values.schema.json
+$ curl -sfLO https://github.com/RashadAnsari/helm-charts/releases/download/helmet-0.20.1/helmet-0.20.1-values.schema.json
+$ mv helmet-0.20.1-values.schema.json values.schema.json
 ```
 
 Helm then checks your `values.yaml` on every `template`, `install` and `upgrade`:
@@ -108,7 +108,7 @@ The file is also attached to each [release](https://github.com/RashadAnsari/helm
 
 dependencies:
   - name: helmet
-    version: 0.20.0
+    version: 0.20.1
     repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults

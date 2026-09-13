@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Helmet">
+  <title>Helmet</title>
+  <rect width="256" height="256" rx="56" fill="#0F1689"/>
+  <g fill="#ffffff">
+    <!-- dome -->
+    <path d="M66 158v-12a62 62 0 0 1 124 0v12z"/>
+    <!-- brim -->
+    <rect x="34" y="164" width="188" height="30" rx="15"/>
+  </g>
+  <!-- centre ridge, cut back out of the dome -->
+  <path d="M119 90h18v68h-18z" fill="#0F1689" opacity=".22"/>
+</svg>

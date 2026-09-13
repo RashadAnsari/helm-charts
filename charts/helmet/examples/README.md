@@ -24,7 +24,7 @@ All three pull helmet from `oci://ghcr.io/rashadansari/charts`. To try local cha
 # Chart.yaml
 dependencies:
   - name: helmet
-    version: 0.20.0
+    version: 0.20.1
     repository: file://../..
     import-values:
       - defaults
