@@ -1,6 +1,9 @@
 suite: persistence
 templates:
   - app.yaml
+release:
+  name: my-app
+  namespace: apps
 set:
   persistence.enabled: true
   persistence.mountPath: /data
@@ -16,7 +19,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.volumes[?(@.name=='data')].persistentVolumeClaim.claimName
-          value: RELEASE-NAME-consumer
+          value: my-app-consumer
       - equal:
           path: spec.template.spec.containers[0].volumeMounts[?(@.name=='data')].mountPath
           value: /data

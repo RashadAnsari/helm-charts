@@ -1,0 +1,114 @@
+suite: ingress
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+set:
+  ingress.enabled: true
+  ingress.hostname: shop.example.com
+tests:
+  # ingressClassName and pathType used to sit behind common.ingress helpers that
+  # only checked for Kubernetes older than 1.18. Those helpers were dropped in
+  # bitnami/common 2.41.0 and the chart needs 1.23+, so both are now emitted
+  # unconditionally. These pin that they still appear.
+  - it: emits the host and path
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: shop.example.com
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: ImplementationSpecific
+
+  - it: honours a custom pathType
+    set:
+      ingress.pathType: Prefix
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+
+  - it: sets ingressClassName when given one
+    set:
+      ingress.ingressClassName: nginx
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+
+  - it: omits ingressClassName when not given one
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - notExists:
+          path: spec.ingressClassName
+
+  - it: covers extra hosts, each with its own pathType
+    set:
+      ingress.extraHosts:
+        - name: admin.example.com
+          path: /admin
+          pathType: Prefix
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.rules[1].host
+          value: admin.example.com
+      - equal:
+          path: spec.rules[1].http.paths[0].path
+          value: /admin
+      - equal:
+          path: spec.rules[1].http.paths[0].pathType
+          value: Prefix
+
+  - it: defaults an extra host's path and pathType
+    set:
+      ingress.extraHosts:
+        - name: admin.example.com
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.rules[1].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[1].http.paths[0].pathType
+          value: ImplementationSpecific
+
+  - it: generates a self-signed certificate when asked
+    set:
+      ingress.tls: true
+      ingress.selfSigned: true
+    documentSelector:
+      path: metadata.name
+      value: shop.example.com-tls
+    asserts:
+      - isKind:
+          of: Secret
+      - equal:
+          path: type
+          value: kubernetes.io/tls
+
+  - it: is absent unless enabled
+    set:
+      ingress.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 2 # Deployment and Service only

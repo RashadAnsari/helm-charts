@@ -60,7 +60,7 @@ Everything else, including probes, resources, affinity, sidecars and the ConfigM
 
 When the Ingress is enabled, helmet also renders TLS Secrets from `ingress.secrets`. If no secrets are supplied and both `ingress.tls` and `ingress.selfSigned` are set, it generates a self-signed certificate instead.
 
-Naming, label and capability helpers come from [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common) 2.29.1, so resource names and `app.kubernetes.io` labels match the conventions used across the Bitnami catalog.
+Naming, label and capability helpers come from [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common) 2.41.0, so resource names and `app.kubernetes.io` labels match the conventions used across the Bitnami catalog.
 
 To include only part of the set, call the individual templates instead of `helmet.app`: `helmet.deployment`, `helmet.statefulset`, `helmet.service`, `helmet.service.headless`, `helmet.ingress`, `helmet.hpa`, `helmet.configmap`, `helmet.secret`, `helmet.persistence`, `helmet.serviceaccount`, `helmet.servicemonitor`, `helmet.podmonitor` and `helmet.cronjob`.
 
@@ -71,8 +71,8 @@ To include only part of the set, call the individual templates instead of `helme
 Helm applies a chart's schema to that chart's own values. Helmet keeps its values under `exports.defaults`, so the schema does nothing while it sits here. To get validation, drop it into your application chart, next to your `values.yaml`:
 
 ```shell
-$ curl -sfLO https://github.com/RashadAnsari/helm-charts/releases/download/helmet-0.19.0/helmet-0.19.0-values.schema.json
-$ mv helmet-0.19.0-values.schema.json values.schema.json
+$ curl -sfLO https://github.com/RashadAnsari/helm-charts/releases/download/helmet-0.20.0/helmet-0.20.0-values.schema.json
+$ mv helmet-0.20.0-values.schema.json values.schema.json
 ```
 
 Helm then checks your `values.yaml` on every `template`, `install` and `upgrade`:
@@ -108,7 +108,7 @@ The file is also attached to each [release](https://github.com/RashadAnsari/helm
 
 dependencies:
   - name: helmet
-    version: 0.19.0
+    version: 0.20.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults

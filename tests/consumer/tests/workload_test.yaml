@@ -1,6 +1,9 @@
 suite: workload selection
 templates:
   - app.yaml
+release:
+  name: my-app
+  namespace: apps
 tests:
   # documentSelector fails the test when nothing matches, so selecting a kind is
   # itself the existence assertion. hasDocuments pins the total, which is what
@@ -49,14 +52,14 @@ tests:
     asserts:
       - equal:
           path: spec.serviceName
-          value: RELEASE-NAME-consumer-headless
+          value: my-app-consumer-headless
 
   - it: creates that headless Service
     set:
       workload.kind: StatefulSet
     documentSelector:
       path: metadata.name
-      value: RELEASE-NAME-consumer-headless
+      value: my-app-consumer-headless
     asserts:
       - isKind:
           of: Service

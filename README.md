@@ -29,7 +29,7 @@ version: "0.1.0"
 
 dependencies:
   - name: helmet
-    version: 0.19.0
+    version: 0.20.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values:
       - defaults # Required to inherit helmet's default values
@@ -91,7 +91,7 @@ Stateful workloads set `workload.kind: StatefulSet`. That swaps the Deployment f
 
 Behind those toggles sit 160 documented parameters covering probes, affinity presets, security contexts, sidecars, init containers, TLS secrets and self-signed certificates. See the [helmet reference](charts/helmet/README.md) for the full table, which is generated from `values.yaml` and checked in CI.
 
-Naming, labels and capability detection come from [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common) 2.29.1, so resource names and the `app.kubernetes.io` labels follow the same conventions as the Bitnami catalog.
+Naming, labels and capability detection come from [bitnami/common](https://github.com/bitnami/charts/tree/main/bitnami/common) 2.41.0, so resource names and the `app.kubernetes.io` labels follow the same conventions as the Bitnami catalog.
 
 ## Requirements
 
@@ -105,7 +105,7 @@ Charts are distributed as OCI artifacts, which Helm supports natively from 3.8 o
 There is no `helm repo add` step. OCI charts are referenced by their full registry path:
 
 ```bash
-$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.19.0
+$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.20.0
 ```
 
 The packages are public, so pulling needs no authentication. Packaged `.tgz` files are also attached to every [GitHub release](https://github.com/RashadAnsari/helm-charts/releases).

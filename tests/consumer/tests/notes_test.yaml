@@ -1,6 +1,9 @@
 suite: install notes
 templates:
   - NOTES.txt
+release:
+  name: my-app
+  namespace: apps
 tests:
   # helmet.notes is not part of helmet.app, so rendering the examples never
   # touches it. Its LoadBalancer branch was broken for the life of the repo
@@ -44,7 +47,7 @@ tests:
       service.type: ClusterIP
     asserts:
       - matchRegexRaw:
-          pattern: 'RELEASE-NAME-consumer\.NAMESPACE\.svc\.cluster\.local:80'
+          pattern: 'my-app-consumer\.apps\.svc\.cluster\.local:80'
       - matchRegexRaw:
           pattern: 'port-forward \$POD_NAME 8080:\$CONTAINER_PORT'
 

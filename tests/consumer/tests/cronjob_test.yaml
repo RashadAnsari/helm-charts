@@ -1,6 +1,9 @@
 suite: cronjob
 templates:
   - app.yaml
+release:
+  name: my-app
+  namespace: apps
 set:
   cronjob.enabled: true
   cronjob.schedule: "*/5 * * * *"
