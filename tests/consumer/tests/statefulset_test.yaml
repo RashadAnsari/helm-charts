@@ -1,0 +1,178 @@
+suite: statefulset
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+set:
+  workload.kind: StatefulSet
+tests:
+  - it: replaces the Deployment when workload.kind is StatefulSet
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - isAPIVersion:
+          of: apps/v1
+      - equal:
+          path: metadata.name
+          value: my-app-consumer
+
+  - it: is absent for the default workload
+    set:
+      workload.kind: Deployment
+    documentSelector:
+      path: kind
+      value: StatefulSet
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is absent without an image repository
+    set:
+      image.repository: ""
+    documentSelector:
+      path: kind
+      value: StatefulSet
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: always sets replicas
+    set:
+      replicaCount: 3
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+
+  - it: refuses to render with autoscaling enabled
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: autoscaling is only supported for a Deployment
+
+  - it: is governed by the chart's headless Service
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.serviceName
+          value: my-app-consumer-headless
+
+  - it: is governed by workload.serviceName when set
+    set:
+      workload.serviceName: my-own-service
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.serviceName
+          value: my-own-service
+
+  - it: defaults podManagementPolicy to OrderedReady
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.podManagementPolicy
+          value: OrderedReady
+
+  - it: honours podManagementPolicy
+    set:
+      workload.podManagementPolicy: Parallel
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.podManagementPolicy
+          value: Parallel
+
+  - it: renders updateStrategy as spec.updateStrategy
+    set:
+      updateStrategy:
+        type: RollingUpdate
+        rollingUpdate:
+          partition: 1
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.updateStrategy.rollingUpdate.partition
+          value: 1
+      - notExists:
+          path: spec.strategy
+
+  - it: uses the shared pod template
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: consumer
+
+  - it: gives each replica its own volume through volumeClaimTemplates
+    set:
+      persistence.enabled: true
+      persistence.mountPath: /data
+      persistence.size: 5Gi
+      persistence.storageClass: fast
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: data
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: 5Gi
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.accessModes
+          value:
+            - ReadWriteOnce
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: fast
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[?(@.name=='data')].mountPath
+          value: /data
+      # the claim template provides the volume, so the pod must not declare one
+      - notExists:
+          path: spec.template.spec.volumes[?(@.name=='data')]
+
+  - it: mounts an existing claim as a plain pod volume
+    set:
+      persistence.enabled: true
+      persistence.existingClaim: borrowed
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - equal:
+          path: spec.template.spec.volumes[?(@.name=='data')].persistentVolumeClaim.claimName
+          value: borrowed
+
+  - it: has no volumeClaimTemplates without persistence
+    documentSelector:
+      path: kind
+      value: StatefulSet
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates
+      - notExists:
+          path: spec.template.spec.volumes

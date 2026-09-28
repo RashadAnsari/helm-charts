@@ -1,0 +1,74 @@
+suite: headless service
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+set:
+  workload.kind: StatefulSet
+tests:
+  - it: governs a StatefulSet
+    documentSelector:
+      path: metadata.name
+      value: my-app-consumer-headless
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.clusterIP
+          value: None
+      - equal:
+          path: spec.publishNotReadyAddresses
+          value: true
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/name: consumer
+            app.kubernetes.io/instance: my-app
+      - equal:
+          path: spec.ports[0].name
+          value: http
+
+  - it: carries the headless role label so the ServiceMonitor skips it
+    documentSelector:
+      path: metadata.name
+      value: my-app-consumer-headless
+    asserts:
+      - equal:
+          path: metadata.labels["helmet/service"]
+          value: headless
+
+  - it: is absent for a Deployment
+    set:
+      workload.kind: Deployment
+    documentSelector:
+      path: metadata.name
+      value: my-app-consumer-headless
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is absent when workload.serviceName names another Service
+    set:
+      workload.serviceName: my-own-service
+    documentSelector:
+      path: metadata.name
+      value: my-app-consumer-headless
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: has no ports when service.ports is empty
+    set:
+      service.ports: []
+    documentSelector:
+      path: metadata.name
+      value: my-app-consumer-headless
+    asserts:
+      - notExists:
+          path: spec.ports

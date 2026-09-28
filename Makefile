@@ -71,7 +71,7 @@ schema-check: ## Verify values.schema.json matches values.yaml
 	@echo "Value schemas are in sync"
 
 package: deps ## Package every chart into build/
-	@mkdir -p $(BUILD)
+	@mkdir -p $(BUILD) && rm -f $(BUILD)/*.tgz
 	@for chart in $(CHARTS); do helm package charts/$$chart --destination $(BUILD) >/dev/null; done
 
 # helmet is a library chart, so it renders nothing on its own. The suites run

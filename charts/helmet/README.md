@@ -50,11 +50,14 @@ workload:
   podManagementPolicy: Parallel   # or OrderedReady, the default
 ```
 
-Switching to `StatefulSet` changes three things:
+Switching to `StatefulSet` changes four things:
 
 - A headless Service is created to govern it, named `<fullname>-headless`, giving each pod stable DNS at `<pod>.<service>.<namespace>.svc.<clusterDomain>`. Set `workload.serviceName` to point at a Service you manage instead, and helmet will not create one.
 - `persistence` becomes `volumeClaimTemplates`, so every replica gets its own volume rather than sharing one. `persistence.existingClaim` is the exception: a named claim is a single shared volume, so it stays a plain pod volume.
 - `updateStrategy` is rendered as `spec.updateStrategy` rather than a Deployment's `spec.strategy`. The two accept different `rollingUpdate` fields, so set it to match your `workload.kind`.
+- `autoscaling` is not supported. Rendering fails if `autoscaling.enabled` is set, so size the StatefulSet with `replicaCount`.
+
+Both Services carry a `helmet/service` label, `primary` or `headless`, and the ServiceMonitor selects only `primary`. The headless Service selects the same pods on the same ports, so matching it too would scrape every pod twice.
 
 Everything else, including probes, resources, affinity, sidecars and the ConfigMap and Secret checksums that trigger restarts, is identical between the two. Both workloads share one pod template.
 
@@ -71,8 +74,8 @@ To include only part of the set, call the individual templates instead of `helme
 Helm applies a chart's schema to that chart's own values. Helmet keeps its values under `exports.defaults`, so the schema does nothing while it sits here. To get validation, drop it into your application chart, next to your `values.yaml`:
 
 ```shell
-$ curl -sfLO https://github.com/RashadAnsari/helm-charts/releases/download/helmet-0.20.1/helmet-0.20.1-values.schema.json
-$ mv helmet-0.20.1-values.schema.json values.schema.json
+$ curl -sfLO https://github.com/RashadAnsari/helm-charts/releases/download/helmet-0.21.0/helmet-0.21.0-values.schema.json
+$ mv helmet-0.21.0-values.schema.json values.schema.json
 ```
 
 Helm then checks your `values.yaml` on every `template`, `install` and `upgrade`:
@@ -108,7 +111,7 @@ The file is also attached to each [release](https://github.com/RashadAnsari/helm
 
 dependencies:
   - name: helmet
-    version: 0.20.1
+    version: 0.21.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults
@@ -241,14 +244,14 @@ Three runnable charts are in [examples](examples): `simple` is the chart above, 
 
 ### Autoscaling parameters
 
-| Name                       | Description                                                                      | Value   |
-| -------------------------- | -------------------------------------------------------------------------------- | ------- |
-| `autoscaling.enabled`      | Deploy a HorizontalPodAutoscaler object for the APP deployment                   | `false` |
-| `autoscaling.minReplicas`  | Minimum number of replicas to scale back                                         | `3`     |
-| `autoscaling.maxReplicas`  | Maximum number of replicas to scale out                                          | `5`     |
-| `autoscaling.targetCPU`    | Define the CPU target to trigger the scaling actions (utilization percentage)    | `80`    |
-| `autoscaling.targetMemory` | Define the memory target to trigger the scaling actions (utilization percentage) | `80`    |
-| `autoscaling.metrics`      | Metrics to use when deciding to scale the deployment (evaluated as a template)   | `[]`    |
+| Name                       | Description                                                                                                  | Value   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------ | ------- |
+| `autoscaling.enabled`      | Deploy a HorizontalPodAutoscaler for the Deployment. Not supported with a StatefulSet, which fails to render | `false` |
+| `autoscaling.minReplicas`  | Minimum number of replicas to scale back                                                                     | `3`     |
+| `autoscaling.maxReplicas`  | Maximum number of replicas to scale out                                                                      | `5`     |
+| `autoscaling.targetCPU`    | Define the CPU target to trigger the scaling actions (utilization percentage)                                | `80`    |
+| `autoscaling.targetMemory` | Define the memory target to trigger the scaling actions (utilization percentage)                             | `80`    |
+| `autoscaling.metrics`      | Metrics to use when deciding to scale the deployment (evaluated as a template)                               | `[]`    |
 
 ### ConfigMap parameters
 

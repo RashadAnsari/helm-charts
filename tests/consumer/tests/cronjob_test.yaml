@@ -11,20 +11,61 @@ set:
     - name: job
       image: alpine:3.22
 tests:
-  # Three of these values were declared but ignored: restartPolicy was
-  # hardcoded, podSecurityContext read the top-level one, and nodeSelector and
-  # tolerations only applied when the top-level value was also set.
-  - it: honours the schedule and concurrency policy
+  - it: runs the containers on the schedule
     documentSelector:
       path: kind
       value: CronJob
     asserts:
+      - isAPIVersion:
+          of: batch/v1
+      - equal:
+          path: metadata.name
+          value: my-app-consumer
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers
+          value:
+            - name: job
+              image: alpine:3.22
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.restartPolicy
+          value: OnFailure
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: 3
       - equal:
           path: spec.schedule
           value: "*/5 * * * *"
       - equal:
           path: spec.concurrencyPolicy
           value: Allow
+
+  - it: adds pod annotations, init containers and volumes
+    set:
+      cronjob.podAnnotations:
+        owner: batch
+      cronjob.initContainers:
+        - name: prepare
+          image: alpine:3.22
+      cronjob.volumes:
+        - name: scratch
+          emptyDir: {}
+      cronjob.successfulJobsHistoryLimit: 1
+    documentSelector:
+      path: kind
+      value: CronJob
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.metadata.annotations.owner
+          value: batch
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.initContainers[0].name
+          value: prepare
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.volumes[0].name
+          value: scratch
+      - equal:
+          path: spec.successfulJobsHistoryLimit
+          value: 1
 
   - it: honours cronjob.restartPolicy
     set:
@@ -50,20 +91,6 @@ tests:
       - equal:
           path: spec.jobTemplate.spec.template.spec.securityContext.fsGroup
           value: 9999
-
-  - it: leaves the workload's security context alone
-    set:
-      podSecurityContext.enabled: true
-      podSecurityContext.fsGroup: 2000
-      cronjob.podSecurityContext.enabled: true
-      cronjob.podSecurityContext.fsGroup: 9999
-    documentSelector:
-      path: kind
-      value: Deployment
-    asserts:
-      - equal:
-          path: spec.template.spec.securityContext.fsGroup
-          value: 2000
 
   - it: omits the security context when only the workload enables one
     set:
@@ -121,6 +148,10 @@ tests:
   - it: is absent unless enabled
     set:
       cronjob.enabled: false
+    documentSelector:
+      path: kind
+      value: CronJob
+      skipEmptyTemplates: true
     asserts:
       - hasDocuments:
-          count: 2 # Deployment and Service only
+          count: 0

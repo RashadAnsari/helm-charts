@@ -8,10 +8,6 @@ set:
   ingress.enabled: true
   ingress.hostname: shop.example.com
 tests:
-  # ingressClassName and pathType used to sit behind common.ingress helpers that
-  # only checked for Kubernetes older than 1.18. Those helpers were dropped in
-  # bitnami/common 2.41.0 and the chart needs 1.23+, so both are now emitted
-  # unconditionally. These pin that they still appear.
   - it: emits the host and path
     documentSelector:
       path: kind
@@ -92,23 +88,132 @@ tests:
           path: spec.rules[1].http.paths[0].pathType
           value: ImplementationSpecific
 
-  - it: generates a self-signed certificate when asked
+  - it: points every rule at the Service's http port
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - isAPIVersion:
+          of: networking.k8s.io/v1
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service
+          value:
+            name: my-app-consumer
+            port:
+              name: http
+
+  - it: adds extra paths, rules and annotations
+    set:
+      ingress.extraPaths:
+        - path: /api
+          pathType: Prefix
+          backend:
+            service:
+              name: api
+              port:
+                number: 80
+      ingress.extraRules:
+        - host: other.example.com
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: other
+                    port:
+                      number: 80
+      ingress.annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: /
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /api
+      - equal:
+          path: spec.rules[0].http.paths[1].path
+          value: /
+      - equal:
+          path: spec.rules[1].host
+          value: other.example.com
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/rewrite-target"]
+          value: /
+
+  - it: terminates TLS with the self-signed certificate
     set:
       ingress.tls: true
       ingress.selfSigned: true
     documentSelector:
-      path: metadata.name
-      value: shop.example.com-tls
+      path: kind
+      value: Ingress
     asserts:
-      - isKind:
-          of: Secret
       - equal:
-          path: type
-          value: kubernetes.io/tls
+          path: spec.tls
+          value:
+            - hosts:
+                - shop.example.com
+              secretName: shop.example.com-tls
+
+  - it: terminates TLS with an existing Secret
+    set:
+      ingress.tls: true
+      ingress.existingSecret: my-cert
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: my-cert
+
+  - it: terminates TLS with a cert-manager certificate
+    set:
+      ingress.tls: true
+      ingress.annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: shop.example.com-tls
+
+  - it: appends extraTls
+    set:
+      ingress.extraTls:
+        - hosts: [admin.example.com]
+          secretName: admin-tls
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - equal:
+          path: spec.tls
+          value:
+            - hosts: [admin.example.com]
+              secretName: admin-tls
+
+  - it: has no tls section without a certificate source
+    set:
+      ingress.tls: true
+    documentSelector:
+      path: kind
+      value: Ingress
+    asserts:
+      - notExists:
+          path: spec.tls
 
   - it: is absent unless enabled
     set:
       ingress.enabled: false
+    documentSelector:
+      path: kind
+      value: Ingress
+      skipEmptyTemplates: true
     asserts:
       - hasDocuments:
-          count: 2 # Deployment and Service only
+          count: 0

@@ -5,9 +5,6 @@ release:
   name: my-app
   namespace: apps
 tests:
-  # helmet.notes is not part of helmet.app, so rendering the examples never
-  # touches it. Its LoadBalancer branch was broken for the life of the repo
-  # because nothing executed it. These cover every branch.
   - it: points at the ingress host when an ingress exists
     set:
       ingress.enabled: true

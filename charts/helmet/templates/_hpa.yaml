@@ -1,5 +1,8 @@
 {{- define "helmet.hpa" -}}
 {{- if .Values.autoscaling.enabled }}
+{{- if include "helmet.isStatefulSet" . }}
+{{- fail "autoscaling is only supported for a Deployment. Set autoscaling.enabled to false for a StatefulSet and size it with replicaCount." }}
+{{- end }}
 ---
 apiVersion: {{ include "common.capabilities.hpa.apiVersion" ( dict "context" $ ) }}
 kind: HorizontalPodAutoscaler
@@ -22,25 +25,17 @@ spec:
     - type: Resource
       resource:
         name: cpu
-      {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
-        targetAverageUtilization: {{ .Values.autoscaling.targetCPU }}
-      {{- else }}
         target:
           type: Utilization
           averageUtilization: {{ .Values.autoscaling.targetCPU }}
-      {{- end }}
   {{- end }}
   {{- if .Values.autoscaling.targetMemory }}
     - type: Resource
       resource:
         name: memory
-      {{- if semverCompare "<1.23-0" (include "common.capabilities.kubeVersion" .) }}
-        targetAverageUtilization: {{ .Values.autoscaling.targetMemory }}
-      {{- else }}
         target:
           type: Utilization
           averageUtilization: {{ .Values.autoscaling.targetMemory }}
-      {{- end }}
   {{- end }}
   {{- if .Values.autoscaling.metrics }}
   {{- include "common.tplvalues.render" (dict "value" .Values.autoscaling.metrics "context" $) | nindent 4 }}

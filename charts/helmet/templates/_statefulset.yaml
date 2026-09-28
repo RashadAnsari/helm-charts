@@ -12,9 +12,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" $annotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   serviceName: {{ include "helmet.headlessServiceName" . }}
   podManagementPolicy: {{ .Values.workload.podManagementPolicy }}

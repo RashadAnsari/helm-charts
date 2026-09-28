@@ -1,0 +1,152 @@
+suite: servicemonitor
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+set:
+  serviceMonitor.enabled: true
+tests:
+  - it: scrapes the primary Service
+    documentSelector:
+      path: kind
+      value: ServiceMonitor
+    asserts:
+      - isAPIVersion:
+          of: monitoring.coreos.com/v1
+      - equal:
+          path: metadata.namespace
+          value: apps
+      - equal:
+          path: spec.endpoints
+          value:
+            - port: http
+              path: /metrics
+      - equal:
+          path: spec.namespaceSelector.matchNames
+          value:
+            - apps
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: consumer
+            app.kubernetes.io/instance: my-app
+            helmet/service: primary
+
+  # The headless Service of a StatefulSet selects the same pods and exposes the
+  # same ports, so matching both would scrape every pod twice.
+  - it: selects the primary Service and not the headless one
+    set:
+      workload.kind: StatefulSet
+    documentSelector:
+      path: kind
+      value: ServiceMonitor
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels["helmet/service"]
+          value: primary
+
+  - it: is absent unless enabled
+    set:
+      serviceMonitor.enabled: false
+    documentSelector:
+      path: kind
+      value: ServiceMonitor
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: honours the endpoint settings
+    set:
+      serviceMonitor.port: metrics
+      serviceMonitor.path: /stats
+      serviceMonitor.interval: 15s
+      serviceMonitor.scrapeTimeout: 5s
+      serviceMonitor.honorLabels: true
+      serviceMonitor.relabelings:
+        - action: labeldrop
+          regex: pod
+      serviceMonitor.metricRelabelings:
+        - action: drop
+          sourceLabels: [__name__]
+          regex: go_.*
+    documentSelector:
+      path: kind
+      value: ServiceMonitor
+    asserts:
+      - equal:
+          path: spec.endpoints[0].port
+          value: metrics
+      - equal:
+          path: spec.endpoints[0].path
+          value: /stats
+      - equal:
+          path: spec.endpoints[0].interval
+          value: 15s
+      - equal:
+          path: spec.endpoints[0].scrapeTimeout
+          value: 5s
+      - equal:
+          path: spec.endpoints[0].honorLabels
+          value: true
+      - equal:
+          path: spec.endpoints[0].relabelings[0].action
+          value: labeldrop
+      - equal:
+          path: spec.endpoints[0].metricRelabelings[0].regex
+          value: go_.*
+
+  - it: can live in the Prometheus namespace
+    set:
+      serviceMonitor.namespace: monitoring
+    documentSelector:
+      path: kind
+      value: ServiceMonitor
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+      - equal:
+          path: spec.namespaceSelector.matchNames
+          value:
+            - apps
+
+  - it: honours a custom namespaceSelector
+    set:
+      serviceMonitor.namespaceSelector:
+        any: true
+    documentSelector:
+      path: kind
+      value: ServiceMonitor
+    asserts:
+      - equal:
+          path: spec.namespaceSelector
+          value:
+            any: true
+
+  - it: adds jobLabel, labels, annotations and extra selector labels
+    set:
+      serviceMonitor.jobLabel: app
+      serviceMonitor.labels:
+        release: prometheus
+      serviceMonitor.annotations:
+        owner: sre
+      serviceMonitor.selector:
+        tier: web
+    documentSelector:
+      path: kind
+      value: ServiceMonitor
+    asserts:
+      - equal:
+          path: spec.jobLabel
+          value: app
+      - equal:
+          path: metadata.labels.release
+          value: prometheus
+      - equal:
+          path: metadata.annotations.owner
+          value: sre
+      - equal:
+          path: spec.selector.matchLabels.tier
+          value: web

@@ -1,0 +1,132 @@
+suite: podmonitor
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+set:
+  podMonitor.enabled: true
+tests:
+  - it: scrapes the pods directly
+    documentSelector:
+      path: kind
+      value: PodMonitor
+    asserts:
+      - isAPIVersion:
+          of: monitoring.coreos.com/v1
+      - equal:
+          path: metadata.namespace
+          value: apps
+      - equal:
+          path: spec.podMetricsEndpoints
+          value:
+            - port: http
+              path: /metrics
+              interval: 30s
+              scrapeTimeout: 10s
+      - equal:
+          path: spec.namespaceSelector.matchNames
+          value:
+            - apps
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: consumer
+            app.kubernetes.io/instance: my-app
+
+  - it: is absent unless enabled
+    set:
+      podMonitor.enabled: false
+    documentSelector:
+      path: kind
+      value: PodMonitor
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: honours the endpoint settings
+    set:
+      podMonitor.port: metrics
+      podMonitor.path: /stats
+      podMonitor.honorLabels: true
+      podMonitor.relabelings:
+        - action: labeldrop
+          regex: pod
+      podMonitor.metricRelabelings:
+        - action: drop
+          sourceLabels: [__name__]
+          regex: go_.*
+    documentSelector:
+      path: kind
+      value: PodMonitor
+    asserts:
+      - equal:
+          path: spec.podMetricsEndpoints[0].port
+          value: metrics
+      - equal:
+          path: spec.podMetricsEndpoints[0].path
+          value: /stats
+      - equal:
+          path: spec.podMetricsEndpoints[0].honorLabels
+          value: true
+      - equal:
+          path: spec.podMetricsEndpoints[0].relabelings[0].action
+          value: labeldrop
+      - equal:
+          path: spec.podMetricsEndpoints[0].metricRelabelings[0].regex
+          value: go_.*
+
+  - it: can live in the Prometheus namespace
+    set:
+      podMonitor.namespace: monitoring
+    documentSelector:
+      path: kind
+      value: PodMonitor
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: monitoring
+      - equal:
+          path: spec.namespaceSelector.matchNames
+          value:
+            - apps
+
+  - it: honours a custom namespaceSelector
+    set:
+      podMonitor.namespaceSelector:
+        any: true
+    documentSelector:
+      path: kind
+      value: PodMonitor
+    asserts:
+      - equal:
+          path: spec.namespaceSelector
+          value:
+            any: true
+
+  - it: adds jobLabel, labels, annotations and extra selector labels
+    set:
+      podMonitor.jobLabel: app
+      podMonitor.labels:
+        release: prometheus
+      podMonitor.annotations:
+        owner: sre
+      podMonitor.selector:
+        tier: web
+    documentSelector:
+      path: kind
+      value: PodMonitor
+    asserts:
+      - equal:
+          path: spec.jobLabel
+          value: app
+      - equal:
+          path: metadata.labels.release
+          value: prometheus
+      - equal:
+          path: metadata.annotations.owner
+          value: sre
+      - equal:
+          path: spec.selector.matchLabels.tier
+          value: web

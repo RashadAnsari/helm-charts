@@ -1,0 +1,439 @@
+suite: pod template
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+# The pod template is shared by the Deployment and the StatefulSet. It is tested
+# through the Deployment here; the statefulset suite checks that it uses it too.
+tests:
+  - it: runs the image with a pull policy derived from the tag
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/nginx:latest
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Always
+
+  - it: pulls a pinned tag only when missing
+    set:
+      image.tag: "1.29"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: docker.io/nginx:1.29
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: IfNotPresent
+
+  - it: honours an explicit pull policy and pull secrets
+    set:
+      image.pullPolicy: Never
+      image.pullSecrets:
+        - regcred
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: Never
+      - equal:
+          path: spec.template.spec.imagePullSecrets
+          value:
+            - name: regcred
+
+  - it: exposes the container ports
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports
+          value:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+  - it: renders command and args
+    set:
+      command: ["/bin/app"]
+      args: ["--verbose"]
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value: ["/bin/app"]
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: ["--verbose"]
+
+  - it: turns an envVars map into an env array
+    set:
+      envVars:
+        FOO: foo
+        BAR:
+          valueFrom:
+            secretKeyRef:
+              name: creds
+              key: bar
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: FOO
+            value: foo
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BAR
+            valueFrom:
+              secretKeyRef:
+                name: creds
+                key: bar
+
+  - it: loads env from a ConfigMap and a Secret
+    set:
+      envVarsConfigMap: app-env
+      envVarsSecret: app-secret-env
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - configMapRef:
+                name: app-env
+            - secretRef:
+                name: app-secret-env
+
+  - it: renders enabled probes without the enabled key
+    set:
+      livenessProbe:
+        enabled: true
+        httpGet:
+          path: /healthz
+          port: http
+      readinessProbe:
+        enabled: true
+        tcpSocket:
+          port: http
+      startupProbe:
+        enabled: true
+        exec:
+          command: ["true"]
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            httpGet:
+              path: /healthz
+              port: http
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.tcpSocket.port
+          value: http
+      - equal:
+          path: spec.template.spec.containers[0].startupProbe.exec.command
+          value: ["true"]
+
+  - it: omits probes that are disabled or empty
+    set:
+      livenessProbe:
+        enabled: false
+        httpGet:
+          path: /healthz
+          port: http
+      readinessProbe:
+        enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].livenessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].readinessProbe
+      - notExists:
+          path: spec.template.spec.containers[0].startupProbe
+
+  - it: renders resources and lifecycle hooks
+    set:
+      resources:
+        requests:
+          cpu: 100m
+      lifecycleHooks:
+        preStop:
+          exec:
+            command: ["sleep", "5"]
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 100m
+      - equal:
+          path: spec.template.spec.containers[0].lifecycle.preStop.exec.command
+          value: ["sleep", "5"]
+
+  - it: applies security contexts only when enabled
+    set:
+      podSecurityContext.enabled: true
+      podSecurityContext.fsGroup: 2000
+      containerSecurityContext.enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            fsGroup: 2000
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            runAsUser: 1001
+            runAsNonRoot: true
+
+  - it: omits security contexts by default
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.template.spec.securityContext
+      - notExists:
+          path: spec.template.spec.containers[0].securityContext
+
+  - it: adds sidecars and init containers
+    set:
+      sidecars:
+        - name: proxy
+          image: envoy
+      initContainers:
+        - name: migrate
+          image: migrate
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: proxy
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: migrate
+
+  - it: mounts the ConfigMap when asked
+    set:
+      configMap.mounted: true
+      configMap.mountPath: /etc/app
+      configMap.subPath: app.yaml
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[?(@.name=='my-app-consumer')].configMap.name
+          value: my-app-consumer
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[?(@.name=='my-app-consumer')].mountPath
+          value: /etc/app
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[?(@.name=='my-app-consumer')].subPath
+          value: app.yaml
+
+  - it: adds extra volumes and mounts
+    set:
+      extraVolumes:
+        - name: scratch
+          emptyDir: {}
+      extraVolumeMounts:
+        - name: scratch
+          mountPath: /scratch
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[?(@.name=='scratch')].emptyDir
+          value: {}
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[?(@.name=='scratch')].mountPath
+          value: /scratch
+
+  - it: has no volumes or mounts by default
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.template.spec.volumes
+      - notExists:
+          path: spec.template.spec.containers[0].volumeMounts
+
+  - it: rolls the pods when the ConfigMap or Secret changes
+    set:
+      configMap.data:
+        FOO: bar
+      secret.stringData:
+        password: hunter2
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations["checksum/configMap"]
+      - exists:
+          path: spec.template.metadata.annotations["checksum/secret"]
+
+  - it: carries podLabels and podAnnotations
+    set:
+      podLabels:
+        tier: web
+      podAnnotations:
+        scrape: "true"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.tier
+          value: web
+      - equal:
+          path: spec.template.metadata.annotations.scrape
+          value: "true"
+
+  - it: applies a soft pod anti-affinity by default
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - exists:
+          path: spec.template.spec.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution
+      - notExists:
+          path: spec.template.spec.affinity.podAffinity
+
+  - it: prefers an explicit affinity over the presets
+    set:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: zone
+                    operator: In
+                    values: [a]
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - exists:
+          path: spec.template.spec.affinity.nodeAffinity
+      - notExists:
+          path: spec.template.spec.affinity.podAntiAffinity
+
+  - it: applies a node affinity preset
+    set:
+      podAntiAffinityPreset: ""
+      nodeAffinityPreset:
+        type: hard
+        key: zone
+        values: [a]
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: zone
+      - notExists:
+          path: spec.template.spec.affinity.podAntiAffinity
+
+  - it: renders the scheduling fields
+    set:
+      nodeSelector:
+        tier: general
+      tolerations:
+        - key: dedicated
+          operator: Exists
+      priorityClassName: high
+      schedulerName: custom
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: zone
+          whenUnsatisfiable: DoNotSchedule
+      terminationGracePeriodSeconds: 45
+      hostAliases:
+        - ip: 10.0.0.1
+          hostnames: [db]
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector.tier
+          value: general
+      - equal:
+          path: spec.template.spec.tolerations[0].key
+          value: dedicated
+      - equal:
+          path: spec.template.spec.priorityClassName
+          value: high
+      - equal:
+          path: spec.template.spec.schedulerName
+          value: custom
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].topologyKey
+          value: zone
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 45
+      - equal:
+          path: spec.template.spec.hostAliases[0].ip
+          value: 10.0.0.1
+
+  - it: runs as the default service account unless one is created
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: default
+
+  - it: runs as the chart's service account when one is created
+    set:
+      serviceAccount.create: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: my-app-consumer
+
+  - it: sets the restart policy
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Always
