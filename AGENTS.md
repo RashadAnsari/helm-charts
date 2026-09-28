@@ -23,7 +23,7 @@ charts/helmet/
   values.schema.json    GENERATED from the same annotations
 hack/                   helper scripts used by the Makefile
 tests/consumer/         helm-unittest fixture: a real chart that includes helmet
-  tests/*_test.yaml     the suites
+  tests/*_test.yaml     one suite per resource, named after its template
 Makefile                deps, lint, readme, schema, template, conform, check
 .github/workflows/ci.yaml
 ```
@@ -82,15 +82,26 @@ make conform
 
 Run it after any template change.
 
-### Add a test for anything you fix
+### Tests: one suite per resource
 
-`make conform` proves the manifests render and are valid. It does not prove they are *right*. The suites in `tests/consumer/tests/` do that, and every bug this chart has had is pinned by one: the crashing `helmet.notes` LoadBalancer branch, the StatefulSet volume that nothing defined, and the three cronjob values that were declared but ignored.
+`make conform` proves the manifests render and are valid. It does not prove they are *right*. The suites in `tests/consumer/tests/` do that.
+
+There is one suite per template, named after it: `_service.yaml` is tested by `service_test.yaml`, `_pod.yaml` by `pod_test.yaml`, and so on. `NOTES.txt` has `notes_test.yaml`. Each suite asserts on its own resource only, covering when it renders, when it does not, and what every value it reads does to it.
+
+Suites describe what the chart does now. Do not keep tests for removed resources or values, and do not write test names or comments that narrate old bugs. When behavior changes, rewrite the affected tests to describe the new behavior.
 
 The fixture is a real application chart because a library chart renders nothing on its own. It includes both `helmet.app` and `helmet.notes`, so NOTES gets covered too; nothing else in the repo exercises that template.
 
-When you fix a template, add the assertion first and confirm it fails, then fix. Reintroducing each old bug and watching the matching test fail is how these were checked.
+When you fix a template, add the assertion first and confirm it fails, then fix.
 
-Two helm-unittest details that cost time: `containsDocument` asserts against *every* document rather than any one, so use `documentSelector` for existence and `hasDocuments` for absence. And `set:` does not honour `key[0].field` indexing the way `helm --set` does, producing nils; set the whole array instead.
+helm-unittest details that cost time:
+
+- `documentSelector` fails the test when nothing matches, so selecting a kind or name is itself the existence assertion.
+- For absence, select the resource with `skipEmptyTemplates: true` and assert `hasDocuments: count: 0`. With no match the asserts are skipped; with a match `hasDocuments` counts the whole template and fails. Get the selector right, since a selector that never matches passes silently.
+- `containsDocument` with `not: true` does not prove absence: it passes as long as some other document fails to match.
+- `set:` merges maps into the suite's `set:`, so `key: {}` does not clear a map the suite set. Use `key: null`.
+- `set:` does not honour `key[0].field` indexing the way `helm --set` does, producing nils; set the whole array instead.
+- The default Kubernetes version is old. Do not test branches for Kubernetes versions the chart does not support.
 
 ## Releasing
 

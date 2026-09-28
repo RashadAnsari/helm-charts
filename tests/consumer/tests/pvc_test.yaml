@@ -1,0 +1,107 @@
+suite: persistentvolumeclaim
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+set:
+  persistence.enabled: true
+tests:
+  - it: is one claim shared by the Deployment's replicas
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - isAPIVersion:
+          of: v1
+      - equal:
+          path: metadata.name
+          value: my-app-consumer
+      - equal:
+          path: spec.accessModes
+          value:
+            - ReadWriteOnce
+      - equal:
+          path: spec.resources.requests.storage
+          value: 8Gi
+      - notExists:
+          path: spec.storageClassName
+
+  - it: honours size, access modes, storage class and annotations
+    set:
+      persistence.size: 5Gi
+      persistence.accessModes:
+        - ReadWriteMany
+      persistence.storageClass: fast
+      persistence.annotations:
+        backup: daily
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: 5Gi
+      - equal:
+          path: spec.accessModes
+          value:
+            - ReadWriteMany
+      - equal:
+          path: spec.storageClassName
+          value: fast
+      - equal:
+          path: metadata.annotations.backup
+          value: daily
+
+  - it: honours selector and dataSource
+    set:
+      persistence.selector:
+        matchLabels:
+          disk: ssd
+      persistence.dataSource:
+        kind: VolumeSnapshot
+        name: snap
+        apiGroup: snapshot.storage.k8s.io
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels.disk
+          value: ssd
+      - equal:
+          path: spec.dataSource.name
+          value: snap
+
+  - it: is absent unless persistence is enabled
+    set:
+      persistence.enabled: false
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is absent when an existing claim is named
+    set:
+      persistence.existingClaim: borrowed
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is absent for a StatefulSet, which uses volumeClaimTemplates
+    set:
+      workload.kind: StatefulSet
+    documentSelector:
+      path: kind
+      value: PersistentVolumeClaim
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0

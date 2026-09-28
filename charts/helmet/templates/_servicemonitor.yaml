@@ -40,13 +40,15 @@ spec:
       {{- end }}
   namespaceSelector:
   {{- if .Values.serviceMonitor.namespaceSelector }}
-  {{- include "common.tplvalues.render" (dict "value" .Values.serviceMonitor.namespaceSelector "context" $) | indent 4 }}
+  {{- include "common.tplvalues.render" (dict "value" .Values.serviceMonitor.namespaceSelector "context" $) | nindent 4 }}
   {{- else }}
     matchNames:
       - {{ include "common.names.namespace" . | quote }}
   {{- end }}
   selector:
     matchLabels: {{- include "common.labels.matchLabels" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 6 }}
+      {{- /* Only the primary Service. A StatefulSet's headless Service selects the same pods, so matching it too would scrape every pod twice. */}}
+      helmet/service: primary
       {{- if .Values.serviceMonitor.selector }}
       {{- include "common.tplvalues.render" (dict "value" .Values.serviceMonitor.selector "context" $) | nindent 6 }}
       {{- end }}

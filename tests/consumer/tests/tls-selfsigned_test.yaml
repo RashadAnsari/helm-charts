@@ -1,0 +1,75 @@
+suite: self-signed tls secret
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+set:
+  ingress.enabled: true
+  ingress.hostname: shop.example.com
+  ingress.tls: true
+  ingress.selfSigned: true
+tests:
+  - it: generates a certificate for the ingress hostname
+    documentSelector:
+      path: metadata.name
+      value: shop.example.com-tls
+    asserts:
+      - isKind:
+          of: Secret
+      - equal:
+          path: type
+          value: kubernetes.io/tls
+      - exists:
+          path: data["tls.crt"]
+      - exists:
+          path: data["tls.key"]
+      - exists:
+          path: data["ca.crt"]
+
+  - it: is absent when ingress.secrets are supplied
+    set:
+      ingress.secrets:
+        - name: shop-tls
+          certificate: CERT
+          key: KEY
+    documentSelector:
+      path: metadata.name
+      value: shop.example.com-tls
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is absent without ingress.selfSigned
+    set:
+      ingress.selfSigned: false
+    documentSelector:
+      path: kind
+      value: Secret
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is absent without ingress.tls
+    set:
+      ingress.tls: false
+    documentSelector:
+      path: kind
+      value: Secret
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is absent when the Ingress is disabled
+    set:
+      ingress.enabled: false
+    documentSelector:
+      path: kind
+      value: Secret
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0

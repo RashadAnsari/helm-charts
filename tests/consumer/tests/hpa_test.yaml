@@ -1,0 +1,86 @@
+suite: horizontalpodautoscaler
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+set:
+  autoscaling.enabled: true
+tests:
+  - it: scales the Deployment on CPU and memory
+    documentSelector:
+      path: kind
+      value: HorizontalPodAutoscaler
+    asserts:
+      - isAPIVersion:
+          of: autoscaling/v2
+      - equal:
+          path: spec.scaleTargetRef
+          value:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: my-app-consumer
+      - equal:
+          path: spec.minReplicas
+          value: 3
+      - equal:
+          path: spec.maxReplicas
+          value: 5
+      - equal:
+          path: spec.metrics
+          value:
+            - type: Resource
+              resource:
+                name: cpu
+                target:
+                  type: Utilization
+                  averageUtilization: 80
+            - type: Resource
+              resource:
+                name: memory
+                target:
+                  type: Utilization
+                  averageUtilization: 80
+
+  - it: drops a target that is unset and appends custom metrics
+    set:
+      autoscaling.targetMemory: ""
+      autoscaling.metrics:
+        - type: Pods
+          pods:
+            metric:
+              name: requests_per_second
+            target:
+              type: AverageValue
+              averageValue: "100"
+    documentSelector:
+      path: kind
+      value: HorizontalPodAutoscaler
+    asserts:
+      - lengthEqual:
+          path: spec.metrics
+          count: 2
+      - equal:
+          path: spec.metrics[0].resource.name
+          value: cpu
+      - equal:
+          path: spec.metrics[1].pods.metric.name
+          value: requests_per_second
+
+  - it: is not supported for a StatefulSet
+    set:
+      workload.kind: StatefulSet
+    asserts:
+      - failedTemplate:
+          errorPattern: autoscaling is only supported for a Deployment
+
+  - it: is absent unless enabled
+    set:
+      autoscaling.enabled: false
+    documentSelector:
+      path: kind
+      value: HorizontalPodAutoscaler
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0

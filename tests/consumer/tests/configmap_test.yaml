@@ -1,0 +1,77 @@
+suite: configmap
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+set:
+  configMap.data:
+    FOO: bar
+    DEBUG: true
+    config.yaml:
+      mode: production
+tests:
+  - it: renders configMap.data
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - isAPIVersion:
+          of: v1
+      - equal:
+          path: metadata.name
+          value: my-app-consumer
+      - equal:
+          path: data.FOO
+          value: bar
+      - equal:
+          path: data.DEBUG
+          value: true
+      - equal:
+          path: data["config.yaml"]
+          value: "mode: production"
+
+  - it: renders templated values
+    set:
+      configMap.data:
+        RELEASE: "{{ .Release.Name }}"
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - equal:
+          path: data.RELEASE
+          value: my-app
+
+  - it: merges its labels and annotations with the common ones
+    set:
+      configMap.labels:
+        team: shop
+      configMap.annotations:
+        owner: alice
+      commonLabels:
+        env: prod
+    documentSelector:
+      path: kind
+      value: ConfigMap
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: shop
+      - equal:
+          path: metadata.labels.env
+          value: prod
+      - equal:
+          path: metadata.annotations.owner
+          value: alice
+
+  - it: is absent without data
+    set:
+      configMap.data: null
+    documentSelector:
+      path: kind
+      value: ConfigMap
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0

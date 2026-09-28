@@ -1,0 +1,161 @@
+suite: service
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+tests:
+  - it: exposes the pods on service.ports
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports
+          value:
+            - name: http
+              protocol: TCP
+              port: 80
+              targetPort: http
+      - equal:
+          path: spec.selector
+          value:
+            app.kubernetes.io/name: consumer
+            app.kubernetes.io/instance: my-app
+
+  - it: carries the primary role label the ServiceMonitor selects on
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: metadata.labels["helmet/service"]
+          value: primary
+
+  - it: renders without a workload
+    set:
+      image.repository: ""
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: metadata.name
+          value: my-app-consumer
+
+  - it: is absent without container ports
+    set:
+      ports: []
+    documentSelector:
+      path: kind
+      value: Service
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is absent without service ports
+    set:
+      service.ports: []
+    documentSelector:
+      path: kind
+      value: Service
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: sets a fixed clusterIP on a ClusterIP service
+    set:
+      service.clusterIP: 10.0.0.10
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.clusterIP
+          value: 10.0.0.10
+
+  - it: configures a LoadBalancer
+    set:
+      service.type: LoadBalancer
+      service.clusterIP: 10.0.0.10
+      service.loadBalancerIP: 1.2.3.4
+      service.loadBalancerSourceRanges:
+        - 10.0.0.0/8
+      service.externalTrafficPolicy: Local
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.loadBalancerIP
+          value: 1.2.3.4
+      - equal:
+          path: spec.loadBalancerSourceRanges
+          value:
+            - 10.0.0.0/8
+      - equal:
+          path: spec.externalTrafficPolicy
+          value: Local
+      - notExists:
+          path: spec.clusterIP
+
+  - it: sets externalTrafficPolicy on a NodePort
+    set:
+      service.type: NodePort
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.externalTrafficPolicy
+          value: Cluster
+
+  - it: leaves externalTrafficPolicy off a ClusterIP service
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - notExists:
+          path: spec.externalTrafficPolicy
+      - notExists:
+          path: spec.loadBalancerIP
+
+  - it: configures session affinity
+    set:
+      service.sessionAffinity: ClientIP
+      service.sessionAffinityConfig:
+        clientIP:
+          timeoutSeconds: 300
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: spec.sessionAffinity
+          value: ClientIP
+      - equal:
+          path: spec.sessionAffinityConfig.clientIP.timeoutSeconds
+          value: 300
+
+  - it: merges its annotations with the common ones
+    set:
+      service.annotations:
+        lb: internal
+      commonAnnotations:
+        tracked: "yes"
+    documentSelector:
+      path: kind
+      value: Service
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            lb: internal
+            tracked: "yes"

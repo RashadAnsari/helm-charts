@@ -1,0 +1,160 @@
+suite: deployment
+templates:
+  - app.yaml
+release:
+  name: my-app
+  namespace: apps
+tests:
+  - it: is the default workload
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - isAPIVersion:
+          of: apps/v1
+      - equal:
+          path: metadata.name
+          value: my-app-consumer
+      - equal:
+          path: metadata.namespace
+          value: apps
+
+  - it: is absent without an image repository
+    set:
+      image.repository: ""
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: is absent when the workload is a StatefulSet
+    set:
+      workload.kind: StatefulSet
+    documentSelector:
+      path: kind
+      value: Deployment
+      skipEmptyTemplates: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: sets replicas and revisionHistoryLimit
+    set:
+      replicaCount: 4
+      revisionHistoryLimit: 2
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 4
+      - equal:
+          path: spec.revisionHistoryLimit
+          value: 2
+
+  - it: leaves replicas to the autoscaler when autoscaling is enabled
+    set:
+      autoscaling.enabled: true
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  - it: selects its pods by name and instance only, whatever podLabels holds
+    set:
+      podLabels:
+        tier: web
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.selector.matchLabels
+          value:
+            app.kubernetes.io/name: consumer
+            app.kubernetes.io/instance: my-app
+
+  - it: renders updateStrategy as spec.strategy
+    set:
+      updateStrategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 1
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.strategy.rollingUpdate.maxSurge
+          value: 1
+      - notExists:
+          path: spec.updateStrategy
+
+  - it: merges labels and annotations with the common ones
+    set:
+      labels:
+        team: shop
+      commonLabels:
+        env: prod
+      annotations:
+        owner: alice
+      commonAnnotations:
+        tracked: "yes"
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: metadata.labels.team
+          value: shop
+      - equal:
+          path: metadata.labels.env
+          value: prod
+      - equal:
+          path: metadata.annotations.owner
+          value: alice
+      - equal:
+          path: metadata.annotations.tracked
+          value: "yes"
+
+  - it: uses the shared pod template
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: consumer
+
+  - it: mounts the chart's PVC when persistence is enabled
+    set:
+      persistence.enabled: true
+      persistence.mountPath: /data
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[?(@.name=='data')].persistentVolumeClaim.claimName
+          value: my-app-consumer
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[?(@.name=='data')].mountPath
+          value: /data
+
+  - it: mounts an existing claim instead when one is named
+    set:
+      persistence.enabled: true
+      persistence.existingClaim: borrowed
+    documentSelector:
+      path: kind
+      value: Deployment
+    asserts:
+      - equal:
+          path: spec.template.spec.volumes[?(@.name=='data')].persistentVolumeClaim.claimName
+          value: borrowed

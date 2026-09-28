@@ -40,7 +40,7 @@ spec:
       {{- end }}
   namespaceSelector:
   {{- if .Values.podMonitor.namespaceSelector }}
-  {{- include "common.tplvalues.render" (dict "value" .Values.podMonitor.namespaceSelector "context" $) | indent 4 }}
+  {{- include "common.tplvalues.render" (dict "value" .Values.podMonitor.namespaceSelector "context" $) | nindent 4 }}
   {{- else }}
     matchNames:
       - {{ include "common.names.namespace" . | quote }}

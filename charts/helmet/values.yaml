@@ -105,7 +105,7 @@ exports:
     ## workload at all; this decides which kind it is.
     ## A StatefulSet also gets a headless Service for stable per-pod DNS, and
     ## turns `persistence` into volumeClaimTemplates so each replica gets its
-    ## own volume.
+    ## own volume. `autoscaling` is not supported for a StatefulSet.
     ## @param workload.kind Workload to render for the application. Allowed values: `Deployment` or `StatefulSet`
     ## @param workload.podManagementPolicy Pod creation and scaling order. StatefulSet only. Allowed values: `OrderedReady` or `Parallel`
     ## @param workload.serviceName Existing headless Service governing the StatefulSet. When empty, helmet creates one named `<fullname>-headless`
@@ -447,7 +447,7 @@ exports:
 
     ## Add an horizontal pod autoscaler
     ## ref: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/
-    ## @param autoscaling.enabled Deploy a HorizontalPodAutoscaler object for the APP deployment
+    ## @param autoscaling.enabled Deploy a HorizontalPodAutoscaler for the Deployment. Not supported with a StatefulSet, which fails to render
     ## @param autoscaling.minReplicas Minimum number of replicas to scale back
     ## @param autoscaling.maxReplicas Maximum number of replicas to scale out
     ## @param autoscaling.targetCPU Define the CPU target to trigger the scaling actions (utilization percentage)

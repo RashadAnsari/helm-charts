@@ -390,7 +390,7 @@
             "properties": {
                 "enabled": {
                     "type": "boolean",
-                    "description": "Deploy a HorizontalPodAutoscaler object for the APP deployment",
+                    "description": "Deploy a HorizontalPodAutoscaler for the Deployment. Not supported with a StatefulSet, which fails to render",
                     "default": false
                 },
                 "minReplicas": {

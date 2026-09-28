@@ -42,7 +42,7 @@ version: "0.1.0"
 
 dependencies:
   - name: helmet
-    version: 0.20.1
+    version: 0.21.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values:
       - defaults # Required to inherit helmet's default values
@@ -94,7 +94,7 @@ Those ten lines of `values.yaml` render a Deployment, a Service and an Ingress, 
 | ConfigMap                 | `configMap.data`                            |
 | Secret                    | `secret.data` or `secret.stringData`        |
 | PersistentVolumeClaim     | `persistence.enabled` on a Deployment, without an existing claim |
-| HorizontalPodAutoscaler   | `autoscaling.enabled`                       |
+| HorizontalPodAutoscaler   | `autoscaling.enabled` on a Deployment       |
 | ServiceAccount            | `serviceAccount.create`                     |
 | ServiceMonitor            | `serviceMonitor.enabled`                    |
 | PodMonitor                | `podMonitor.enabled`                        |
@@ -118,7 +118,7 @@ Charts are distributed as OCI artifacts, which Helm supports natively from 3.8 o
 There is no `helm repo add` step. OCI charts are referenced by their full registry path:
 
 ```bash
-$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.20.1
+$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.21.0
 ```
 
 The packages are public, so pulling needs no authentication. Packaged `.tgz` files are also attached to every [GitHub release](https://github.com/RashadAnsari/helm-charts/releases).
