@@ -1,11 +1,11 @@
 # Helmet
 
-[![Release](https://img.shields.io/github/v/release/RashadAnsari/helm-charts?sort=semver&label=chart)](https://github.com/RashadAnsari/helm-charts/releases/latest)
-[![ghcr.io](https://img.shields.io/badge/ghcr.io-rashadansari%2Fcharts%2Fhelmet-2088FF?logo=github&logoColor=white)](https://github.com/RashadAnsari/helm-charts/pkgs/container/charts%2Fhelmet)
+[![Release](https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&label=chart)](https://github.com/RashadAnsari/helmet/releases/latest)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-rashadansari%2Fcharts%2Fhelmet-2088FF?logo=github&logoColor=white)](https://github.com/RashadAnsari/helmet/pkgs/container/charts%2Fhelmet)
 [![Chart type](https://img.shields.io/badge/chart%20type-library-0F1689?logo=helm&logoColor=white)](https://helm.sh/docs/topics/library_charts/)
 [![Helm](https://img.shields.io/badge/Helm-3.9%2B-0F1689?logo=helm&logoColor=white)](https://helm.sh)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.23%2B-326CE5?logo=kubernetes&logoColor=white)](https://kubernetes.io)
-[![License](https://img.shields.io/github/license/RashadAnsari/helm-charts?color=blue)](../../LICENSE)
+[![License](https://img.shields.io/github/license/RashadAnsari/helmet?color=blue)](../../LICENSE)
 
 Helmet is a [Helm library chart](https://helm.sh/docs/topics/library_charts/) holding the templates that every application chart ends up needing. Declare it as a dependency, write a single `include`, and describe the application in `values.yaml`. Helmet renders the workload, its networking and its monitoring with names, labels and selectors already consistent.
 
@@ -74,8 +74,8 @@ To include only part of the set, call the individual templates instead of `helme
 Helm applies a chart's schema to that chart's own values. Helmet keeps its values under `exports.defaults`, so the schema does nothing while it sits here. To get validation, drop it into your application chart, next to your `values.yaml`:
 
 ```shell
-$ curl -sfLO https://github.com/RashadAnsari/helm-charts/releases/download/helmet-0.21.0/helmet-0.21.0-values.schema.json
-$ mv helmet-0.21.0-values.schema.json values.schema.json
+$ curl -sfLO https://github.com/RashadAnsari/helmet/releases/download/helmet-0.21.1/helmet-0.21.1-values.schema.json
+$ mv helmet-0.21.1-values.schema.json values.schema.json
 ```
 
 Helm then checks your `values.yaml` on every `template`, `install` and `upgrade`:
@@ -87,7 +87,7 @@ my-app:
 - at '/replicaCount': got string, want number
 ```
 
-The file is also attached to each [release](https://github.com/RashadAnsari/helm-charts/releases).
+The file is also attached to each [release](https://github.com/RashadAnsari/helmet/releases).
 
 ### Install notes
 
@@ -111,7 +111,7 @@ The file is also attached to each [release](https://github.com/RashadAnsari/helm
 
 dependencies:
   - name: helmet
-    version: 0.21.0
+    version: 0.21.1
     repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults

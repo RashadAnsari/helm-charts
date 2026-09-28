@@ -12,12 +12,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/RashadAnsari/helm-charts/actions/workflows/ci.yaml"><img src="https://github.com/RashadAnsari/helm-charts/actions/workflows/ci.yaml/badge.svg?branch=main" alt="Charts CI"></a>
-  <a href="https://github.com/RashadAnsari/helm-charts/releases/latest"><img src="https://img.shields.io/github/v/release/RashadAnsari/helm-charts?sort=semver&label=release" alt="Release"></a>
-  <a href="https://github.com/RashadAnsari/helm-charts/pkgs/container/charts%2Fhelmet"><img src="https://img.shields.io/badge/ghcr.io-rashadansari%2Fcharts-2088FF?logo=github&logoColor=white" alt="ghcr.io"></a>
+  <a href="https://github.com/RashadAnsari/helmet/actions/workflows/ci.yaml"><img src="https://github.com/RashadAnsari/helmet/actions/workflows/ci.yaml/badge.svg?branch=main" alt="Charts CI"></a>
+  <a href="https://github.com/RashadAnsari/helmet/releases/latest"><img src="https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&label=release" alt="Release"></a>
+  <a href="https://github.com/RashadAnsari/helmet/pkgs/container/charts%2Fhelmet"><img src="https://img.shields.io/badge/ghcr.io-rashadansari%2Fcharts-2088FF?logo=github&logoColor=white" alt="ghcr.io"></a>
   <a href="https://helm.sh"><img src="https://img.shields.io/badge/Helm-3.9%2B-0F1689?logo=helm&logoColor=white" alt="Helm"></a>
   <a href="https://kubernetes.io"><img src="https://img.shields.io/badge/Kubernetes-1.23%2B-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/RashadAnsari/helm-charts?color=blue" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/RashadAnsari/helmet?color=blue" alt="License"></a>
 </p>
 
 Every Kubernetes service you ship needs the same eleven YAML files. Most teams solve that by copying the last chart they wrote and deleting the parts they don't need, which is how you end up maintaining nine slightly different Deployment templates.
@@ -28,7 +28,7 @@ Every Kubernetes service you ship needs the same eleven YAML files. Most teams s
 
 | Chart                   | Type    | Version                                                                                                                            | Description                                                            |
 |-------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [helmet](charts/helmet) | library | [![Release](https://img.shields.io/github/v/release/RashadAnsari/helm-charts?sort=semver&label=%20&color=0F1689)](https://github.com/RashadAnsari/helm-charts/releases/latest) | Common templates shared by application charts. Not deployable on its own |
+| [helmet](charts/helmet) | library | [![Release](https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&label=%20&color=0F1689)](https://github.com/RashadAnsari/helmet/releases/latest) | Common templates shared by application charts. Not deployable on its own |
 
 ## Quick start
 
@@ -42,7 +42,7 @@ version: "0.1.0"
 
 dependencies:
   - name: helmet
-    version: 0.21.0
+    version: 0.21.1
     repository: oci://ghcr.io/rashadansari/charts
     import-values:
       - defaults # Required to inherit helmet's default values
@@ -118,10 +118,10 @@ Charts are distributed as OCI artifacts, which Helm supports natively from 3.8 o
 There is no `helm repo add` step. OCI charts are referenced by their full registry path:
 
 ```bash
-$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.21.0
+$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.21.1
 ```
 
-The packages are public, so pulling needs no authentication. Packaged `.tgz` files are also attached to every [GitHub release](https://github.com/RashadAnsari/helm-charts/releases).
+The packages are public, so pulling needs no authentication. Packaged `.tgz` files are also attached to every [GitHub release](https://github.com/RashadAnsari/helmet/releases).
 
 ## Releasing
 
