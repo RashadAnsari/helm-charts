@@ -6,8 +6,8 @@ sources:
   - https://github.com/RashadAnsari/helmet
 icon: https://raw.githubusercontent.com/RashadAnsari/helmet/main/charts/helmet/icon.svg
 type: library
-version: "0.21.1"
-appVersion: "0.21.1"
+version: "0.22.0"
+appVersion: "0.22.0"
 keywords:
   - common
   - helper

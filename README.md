@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://github.com/RashadAnsari/helmet/actions/workflows/ci.yaml"><img src="https://github.com/RashadAnsari/helmet/actions/workflows/ci.yaml/badge.svg?branch=main" alt="Charts CI"></a>
-  <a href="https://github.com/RashadAnsari/helmet/releases/latest"><img src="https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&label=release" alt="Release"></a>
+  <a href="https://github.com/RashadAnsari/helmet/releases/latest"><img src="https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&filter=%21helmet-app-*&label=release" alt="Release"></a>
   <a href="https://github.com/RashadAnsari/helmet/pkgs/container/charts%2Fhelmet"><img src="https://img.shields.io/badge/ghcr.io-rashadansari%2Fcharts-2088FF?logo=github&logoColor=white" alt="ghcr.io"></a>
   <a href="https://helm.sh"><img src="https://img.shields.io/badge/Helm-3.9%2B-0F1689?logo=helm&logoColor=white" alt="Helm"></a>
   <a href="https://kubernetes.io"><img src="https://img.shields.io/badge/Kubernetes-1.23%2B-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes"></a>
@@ -26,9 +26,10 @@ Every Kubernetes service you ship needs the same eleven YAML files. Most teams s
 
 ## Charts
 
-| Chart                   | Type    | Version                                                                                                                            | Description                                                            |
-|-------------------------|---------|------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| [helmet](charts/helmet) | library | [![Release](https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&label=%20&color=0F1689)](https://github.com/RashadAnsari/helmet/releases/latest) | Common templates shared by application charts. Not deployable on its own |
+| Chart                           | Type        | Version                                                                                                                                                                                        | Description                                                                                       |
+|---------------------------------|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| [helmet](charts/helmet)         | library     | [![Release](https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&filter=%21helmet-app-*&label=%20&color=0F1689)](https://github.com/RashadAnsari/helmet/releases/latest)    | Common templates shared by application charts. Not deployable on its own                          |
+| [helmet-app](charts/helmet-app) | application | [![Release](https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&filter=helmet-app-*&label=%20&color=0F1689)](https://github.com/RashadAnsari/helmet/releases?q=helmet-app) | Installable wrapper around helmet, configured by a values file alone. No chart of your own needed |
 
 ## Quick start
 
@@ -42,7 +43,7 @@ version: "0.1.0"
 
 dependencies:
   - name: helmet
-    version: 0.21.1
+    version: 0.22.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values:
       - defaults # Required to inherit helmet's default values
@@ -79,6 +80,16 @@ $ helm install my-app .
 ```
 
 Those ten lines of `values.yaml` render a Deployment, a Service and an Ingress, wired together with matching labels, selectors and ports. Three runnable charts are in [charts/helmet/examples](charts/helmet/examples): `simple` is the one above, `full` exercises probes, persistence, autoscaling, monitoring and a CronJob, and `stateful` shows a StatefulSet with per-replica storage.
+
+### Without a chart
+
+If a chart of your own is more than you need, install [helmet-app](charts/helmet-app) with just the `values.yaml` above. It bundles helmet and takes the same values:
+
+```bash
+$ helm install my-app oci://ghcr.io/rashadansari/charts/helmet-app --version 0.22.0 -f values.yaml
+```
+
+Resources are then named `my-app-helmet-app` unless you set `fullnameOverride`. Depend on helmet directly when you need templates of your own next to it.
 
 ## What helmet renders
 
@@ -118,7 +129,7 @@ Charts are distributed as OCI artifacts, which Helm supports natively from 3.8 o
 There is no `helm repo add` step. OCI charts are referenced by their full registry path:
 
 ```bash
-$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.21.1
+$ helm pull oci://ghcr.io/rashadansari/charts/helmet --version 0.22.0
 ```
 
 The packages are public, so pulling needs no authentication. Packaged `.tgz` files are also attached to every [GitHub release](https://github.com/RashadAnsari/helmet/releases).
@@ -127,7 +138,7 @@ The packages are public, so pulling needs no authentication. Packaged `.tgz` fil
 
 [Charts CI](.github/workflows/ci.yaml) lints every chart on pull requests. On a push to `main` it publishes any chart whose `version` in `Chart.yaml` is not in the registry yet, pushing the OCI artifact to `ghcr.io/rashadansari/charts` and cutting a GitHub release with the packaged `.tgz` attached.
 
-To ship a change, bump `version` in the chart's `Chart.yaml` and merge. Versions that are already published are skipped, so merges that touch nothing else are no-ops.
+To ship a change, edit [`VERSION`](VERSION), run `make version-sync` to write it into both charts and every snippet in the docs, and merge. helmet and helmet-app always share a version. `make version-check` fails CI if anything drifts from `VERSION`. Versions that are already published are skipped, so merges that touch nothing else are no-ops.
 
 ## Contributing
 

@@ -43,6 +43,11 @@ jobs:
       - name: Helm lint
         run: make lint
 
+      # VERSION is the one place to set the version. This fails if any chart,
+      # dependency or README snippet has drifted from it.
+      - name: Check version references match VERSION
+        run: make version-check
+
       # Regenerates each chart's parameter table from the @param annotations in
       # values.yaml and fails if the committed README differs. Also fails when
       # an annotation names a value that does not exist, or a value has none.
@@ -83,6 +88,11 @@ jobs:
         with:
           version: ${{ env.HELM_VERSION }}
 
+      # helmet-app bundles charts/helmet as it is on disk, so helmet's own
+      # dependencies must be in place before helmet-app is packaged.
+      - name: Build chart dependencies
+        run: make deps
+
       - name: Log in to GitHub Container Registry
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" \
@@ -112,9 +122,13 @@ jobs:
             # The schema ships as its own asset so consumers can drop it into
             # their application chart, where Helm will actually enforce it.
             cp "${chart}values.schema.json" "dist/${name}-${version}-values.schema.json"
+            # helmet's release stays "latest", which the READMEs link to.
+            latest=true
+            [ "$name" = helmet ] || latest=false
             gh release create "${name}-${version}" \
               "dist/${name}-${version}.tgz" \
               "dist/${name}-${version}-values.schema.json" \
               --title "${name} ${version}" \
+              --latest="$latest" \
               --generate-notes
           done

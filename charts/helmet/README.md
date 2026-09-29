@@ -1,6 +1,6 @@
 # Helmet
 
-[![Release](https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&label=chart)](https://github.com/RashadAnsari/helmet/releases/latest)
+[![Release](https://img.shields.io/github/v/release/RashadAnsari/helmet?sort=semver&filter=%21helmet-app-*&label=chart)](https://github.com/RashadAnsari/helmet/releases/latest)
 [![ghcr.io](https://img.shields.io/badge/ghcr.io-rashadansari%2Fcharts%2Fhelmet-2088FF?logo=github&logoColor=white)](https://github.com/RashadAnsari/helmet/pkgs/container/charts%2Fhelmet)
 [![Chart type](https://img.shields.io/badge/chart%20type-library-0F1689?logo=helm&logoColor=white)](https://helm.sh/docs/topics/library_charts/)
 [![Helm](https://img.shields.io/badge/Helm-3.9%2B-0F1689?logo=helm&logoColor=white)](https://helm.sh)
@@ -74,8 +74,8 @@ To include only part of the set, call the individual templates instead of `helme
 Helm applies a chart's schema to that chart's own values. Helmet keeps its values under `exports.defaults`, so the schema does nothing while it sits here. To get validation, drop it into your application chart, next to your `values.yaml`:
 
 ```shell
-$ curl -sfLO https://github.com/RashadAnsari/helmet/releases/download/helmet-0.21.1/helmet-0.21.1-values.schema.json
-$ mv helmet-0.21.1-values.schema.json values.schema.json
+$ curl -sfLO https://github.com/RashadAnsari/helmet/releases/download/helmet-0.22.0/helmet-0.22.0-values.schema.json
+$ mv helmet-0.22.0-values.schema.json values.schema.json
 ```
 
 Helm then checks your `values.yaml` on every `template`, `install` and `upgrade`:
@@ -105,13 +105,16 @@ The file is also attached to each [release](https://github.com/RashadAnsari/helm
 - Helm 3.9.0+
 
 ## Getting started
+
+To deploy from a values file without writing a chart, install [helmet-app](../helmet-app) instead. It bundles this chart and takes the same values. The steps below are for your own chart.
+
 1. Add the Helmet as a dependency to your chart.
 ```yaml
 # file: Chart.yaml
 
 dependencies:
   - name: helmet
-    version: 0.21.1
+    version: 0.22.0
     repository: oci://ghcr.io/rashadansari/charts
     import-values: # <== It is mandatory if you want to import the Helmet default values.
       - defaults

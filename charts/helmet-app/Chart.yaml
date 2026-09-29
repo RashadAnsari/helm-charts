@@ -1,0 +1,20 @@
+apiVersion: v2
+name: helmet-app
+description: Deploys an application from a values file alone, using helmet's templates. For teams that do not want a chart of their own.
+home: https://github.com/RashadAnsari/helmet/blob/main/charts/helmet-app
+sources:
+  - https://github.com/RashadAnsari/helmet
+icon: https://raw.githubusercontent.com/RashadAnsari/helmet/main/charts/helmet/icon.svg
+type: application
+version: "0.22.0"
+appVersion: "0.22.0"
+maintainers:
+  - name: Rashad Ansari
+    url: https://github.com/RashadAnsari
+# Bundled from the working copy, so both charts always ship the same templates.
+dependencies:
+  - name: helmet
+    version: "0.22.0"
+    repository: file://../helmet
+    import-values:
+      - defaults

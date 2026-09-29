@@ -1,4 +1,8 @@
-CHARTS := $(notdir $(patsubst %/,%,$(wildcard charts/*/)))
+# helmet first, because helmet-app bundles it.
+CHARTS := helmet helmet-app
+# Charts with generated parameter tables and schemas. helmet-app has neither:
+# its values are helmet's, and make deps copies helmet's schema into it.
+DOCUMENTED := helmet
 # Anchored on Chart.yaml so only real charts match, not examples/README.md.
 EXAMPLES := $(sort $(dir $(wildcard charts/*/examples/*/Chart.yaml)))
 README_GENERATOR_VERSION := 2.7.2
@@ -15,22 +19,32 @@ BUILD := build
 SCHEMA_REGISTRY := https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master
 CRD_REGISTRY := https://raw.githubusercontent.com/datreeio/CRDs-catalog/main
 
-.PHONY: help deps lint readme readme-check schema schema-check package unittest template conform check clean
+.PHONY: help deps lint version-sync version-check readme readme-check schema schema-check package unittest template conform check clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'
 
+# helmet-app's dependency is file://../helmet, so `update` packages the working
+# copy, offline. Its Chart.lock is not committed, since it would pin a version.
 deps: ## Build chart dependencies
-	@for chart in $(CHARTS); do helm dependency build charts/$$chart; done
+	@helm dependency build charts/helmet
+	@helm dependency update charts/helmet-app
+	@cp charts/helmet/values.schema.json charts/helmet-app/values.schema.json
 
 lint: deps ## Lint every chart
 	@for chart in $(CHARTS); do helm lint charts/$$chart; done
 
+version-sync: ## Write VERSION into every file that references it
+	@hack/version.sh sync
+
+version-check: ## Verify every version reference matches VERSION
+	@hack/version.sh check
+
 # The generator reads @param annotations from values.yaml. Library charts nest
 # their values under exports.defaults, so the subtree is extracted first.
 readme: ## Regenerate each chart's parameter table from values.yaml
-	@for chart in $(CHARTS); do \
+	@for chart in $(DOCUMENTED); do \
 		yq '.exports.defaults // .' charts/$$chart/values.yaml > /tmp/values-flat.yaml; \
 		$(GENERATOR) --values /tmp/values-flat.yaml --readme charts/$$chart/README.md; \
 	done
@@ -38,7 +52,7 @@ readme: ## Regenerate each chart's parameter table from values.yaml
 # Regenerates into a scratch copy so the working tree is left untouched, which
 # means this reports real drift rather than any uncommitted edit.
 readme-check: ## Verify parameter tables match values.yaml
-	@for chart in $(CHARTS); do \
+	@for chart in $(DOCUMENTED); do \
 		yq '.exports.defaults // .' charts/$$chart/values.yaml > /tmp/values-flat.yaml; \
 		cp charts/$$chart/README.md /tmp/README-expected.md; \
 		$(GENERATOR) --values /tmp/values-flat.yaml --readme /tmp/README-expected.md; \
@@ -48,7 +62,7 @@ readme-check: ## Verify parameter tables match values.yaml
 	@echo "Parameter tables are in sync"
 
 schema: ## Regenerate each chart's values.schema.json from values.yaml
-	@for chart in $(CHARTS); do \
+	@for chart in $(DOCUMENTED); do \
 		yq '.exports.defaults // .' charts/$$chart/values.yaml > /tmp/values-flat.yaml; \
 		yq -o=json '.exports.defaults // .' charts/$$chart/values.yaml > /tmp/values-flat.json; \
 		cp charts/$$chart/README.md /tmp/README-throwaway.md; \
@@ -58,7 +72,7 @@ schema: ## Regenerate each chart's values.schema.json from values.yaml
 	done
 
 schema-check: ## Verify values.schema.json matches values.yaml
-	@for chart in $(CHARTS); do \
+	@for chart in $(DOCUMENTED); do \
 		yq '.exports.defaults // .' charts/$$chart/values.yaml > /tmp/values-flat.yaml; \
 		yq -o=json '.exports.defaults // .' charts/$$chart/values.yaml > /tmp/values-flat.json; \
 		cp charts/$$chart/README.md /tmp/README-throwaway.md; \
@@ -81,11 +95,12 @@ unittest: package ## Run the helm-unittest suites
 	@helm plugin list | grep -q unittest || { \
 		echo "helm-unittest not installed. Run: helm plugin install https://github.com/helm-unittest/helm-unittest --version $(UNITTEST_VERSION)"; exit 1; }
 	@mkdir -p $(FIXTURE)/charts && rm -f $(FIXTURE)/charts/*.tgz
-	@cp $(BUILD)/helmet-*.tgz $(FIXTURE)/charts/
+	@cp $(BUILD)/helmet-[0-9]*.tgz $(FIXTURE)/charts/
 	@helm unittest $(FIXTURE)
 
 # Renders each example against the LOCAL chart rather than the published one, by
-# dropping the freshly packaged .tgz into the example's charts/ directory. Every
+# dropping the freshly packaged .tgz into the example's charts/ directory. Then
+# renders helmet-app with the same values, as someone without a chart would. Every
 # template in charts/*/templates is an unrendered partial, so `helm lint` alone
 # proves nothing: this is what actually executes them.
 template: package ## Render every example at every supported Kubernetes version
@@ -94,12 +109,16 @@ template: package ## Render every example at every supported Kubernetes version
 		name=$$(basename $$example); \
 		chart=$$(echo $$example | cut -d/ -f2); \
 		rm -rf $(BUILD)/ex/$$name && mkdir -p $(BUILD)/ex && cp -r $$example $(BUILD)/ex/$$name; \
-		mkdir -p $(BUILD)/ex/$$name/charts && cp $(BUILD)/$$chart-*.tgz $(BUILD)/ex/$$name/charts/; \
+		mkdir -p $(BUILD)/ex/$$name/charts && cp $(BUILD)/$$chart-[0-9]*.tgz $(BUILD)/ex/$$name/charts/; \
 		for kube in $(KUBE_VERSIONS); do \
 			helm template rel $(BUILD)/ex/$$name --kube-version $$kube \
 				> $(BUILD)/rendered/$$name-$$kube.yaml \
 				|| { echo "FAILED: $$name at Kubernetes $$kube"; exit 1; }; \
 			echo "  rendered $$name at $$kube ($$(grep -cE '^kind:' $(BUILD)/rendered/$$name-$$kube.yaml) resources)"; \
+			out=$(BUILD)/rendered/helmet-app-$$name-$$kube.yaml; \
+			helm template rel $(BUILD)/helmet-app-[0-9]*.tgz -f $$example/values.yaml --kube-version $$kube > $$out \
+				|| { echo "FAILED: helmet-app with $$name values at Kubernetes $$kube"; exit 1; }; \
+			echo "  rendered helmet-app with $$name values at $$kube ($$(grep -cE '^kind:' $$out) resources)"; \
 		done; \
 	done
 	@echo "All examples render"
@@ -118,8 +137,9 @@ conform: template ## Validate rendered manifests against Kubernetes schemas
 			|| { echo "FAILED validation at Kubernetes $$kube"; exit 1; }; \
 	done
 
-check: lint readme-check schema-check unittest conform ## Run everything CI runs
+check: lint version-check readme-check schema-check unittest conform ## Run everything CI runs
 
 clean: ## Remove build output and vendored dependencies
 	@rm -rf $(BUILD) $(FIXTURE)/charts
 	@for chart in $(CHARTS); do rm -rf charts/$$chart/charts; done
+	@rm -f charts/helmet-app/Chart.lock charts/helmet-app/values.schema.json
